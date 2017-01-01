@@ -87,3 +87,25 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+*.egg-info
+*.pot
+*.py[co]
+/test_project/*.py[co]
+/test_project/db.sqlite3
+.tox/
+__pycache__
+MANIFEST
+dist/
+docs/_build/
+docs/locale/
+node_modules/
+tests/coverage_html/
+tests/.coverage
+build/
+tests/report/
+.idea/
+ubuntu-xenial-16.04-cloudimg-console.log
+/.vagrant/
+!/.venv/
+/.venv/
