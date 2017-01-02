@@ -2,8 +2,8 @@ from app import login_manager, db, api
 from flask_restful import Resource, reqparse
 from flask import request, session
 import flask_login
-from models import User
-from utils import ResponseCodes
+from .models import User
+from .utils import ResponseCodes
 
 
 class Logout(Resource):
