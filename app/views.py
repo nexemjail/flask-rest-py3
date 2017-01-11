@@ -2,16 +2,17 @@ import flask_login
 
 from app import login_manager, db, api
 from flask import session
-from flask_jwt import jwt_required, current_identity
 from flask_restful import Resource, reqparse
 
 from .models import User
 from .parsers import login_reqparser, registration_reqparser
 from .utils import ResponseCodes, template_response
 
+from flask_jwt import jwt_required
+
 
 class Logout(Resource):
-    @flask_login.login_required
+    @jwt_required
     def get(self):
         flask_login.logout_user()
         session.update()
@@ -77,7 +78,7 @@ def load_user(user_id):
 
 
 class UserList(Resource):
-    @flask_login.login_required
+    @jwt_required
     def get(self, user_id):
         user = User.query.filter_by(id=user_id).first()
         if not user:
