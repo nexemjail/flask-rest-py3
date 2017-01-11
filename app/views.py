@@ -1,9 +1,13 @@
-from app import login_manager, db, api
-from flask_restful import Resource, reqparse
-from flask import request, session
 import flask_login
+
+from app import login_manager, db, api
+from flask import session
+from flask_jwt import JWT, jwt_required, current_identity
+from flask_restful import Resource, reqparse
+
 from .models import User
-from .utils import ResponseCodes
+from .parsers import login_reqparser, registration_reqparser
+from .utils import ResponseCodes, template_response
 
 
 class Logout(Resource):
@@ -14,37 +18,36 @@ class Logout(Resource):
         return {'detail': 'you are logged out'}, ResponseCodes.OK
 
 
-def _construct_reqparse():
-    parser = reqparse.RequestParser()
-    parser.add_argument('username', type=str, required=True,
-                        location='json', help='Username not provided')
-    parser.add_argument('password', type=str, required=True,
-                        location='json', help='Password not provided')
-    return parser
-
-
 class Login(Resource):
     def __init__(self):
-        self.reqparse = _construct_reqparse()
+        self.reqparse = login_reqparser()
         super(Login, self).__init__()
 
     def post(self):
         data = self.reqparse.parse_args()
 
-        user = User.query.filter_by(username=data['username'],
-                                    password=data['password']).first()
+        user = User.query.filter_by(email=data.get('username')).first()
         if not user:
-            return {'error': 'invalid credentials'}, ResponseCodes.UNPROCESSABLE_ENTITY_422
+            return template_response(status='Error',
+                                     code=ResponseCodes.UNPROCESSABLE_ENTITY_422,
+                                     message='Invalid credentials'),\
+                   ResponseCodes.UNPROCESSABLE_ENTITY_422
 
         if not flask_login.login_user(user):
-            return {'error': 'error while logging in'}, ResponseCodes.SERVER_ERROR_500
+            return template_response(code=ResponseCodes.SERVER_ERROR_500,
+                                     message='Error while logging in',
+                                     status='Error'),\
+                   ResponseCodes.SERVER_ERROR_500
 
-        return {'detail': 'you are logged in!'}, ResponseCodes.OK
+        return template_response(status='Success',
+                                 code=ResponseCodes.OK,
+                                 message='Login successful'),\
+            ResponseCodes.OK
 
 
 class Register(Resource):
     def __init__(self):
-        self.reqparse = _construct_reqparse()
+        self.reqparse = registration_reqparser()
         super(Register, self).__init__()
 
     def post(self):
@@ -52,14 +55,20 @@ class Register(Resource):
 
         users_found = User.query.filter_by(username=data['username']).count()
         if users_found > 0:
-            return {'error': 'user already exists'}, ResponseCodes.BAD_REQUEST_400
+            return template_response(code=ResponseCodes.BAD_REQUEST_400,
+                                     status='Error',
+                                     message='User already exists'),\
+                   ResponseCodes.BAD_REQUEST_400
 
-        user = User(username=data['username'],
-                    password=data['password'])
+        user = User(**data)
         db.session.add(user)
         db.session.commit()
 
-        return {'detail': 'user successfully created'}, ResponseCodes.OK
+        return template_response(status='Success',
+                                 code=ResponseCodes.CREATED,
+                                 message='User created',
+                                 data=user.to_json()),\
+            ResponseCodes.CREATED
 
 
 @login_manager.user_loader
@@ -70,9 +79,17 @@ def load_user(user_id):
 class UserList(Resource):
     @flask_login.login_required
     def get(self, user_id):
-        user = User.query.filter_by(id=user_id).first_or_404()
-        return {'user': str(user)}, ResponseCodes.OK
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return template_response(status='Error',
+                                     code=ResponseCodes.NOT_FOUND_404,
+                                     message='Not found'), \
+                ResponseCodes.NOT_FOUND_404
 
+        return template_response(status='OK',
+                                 code=ResponseCodes.OK,
+                                 data=user.to_json()),\
+            ResponseCodes.OK
 
 api.add_resource(Register, '/register/')
 api.add_resource(Login, '/login/')
