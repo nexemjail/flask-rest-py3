@@ -2,7 +2,7 @@ import flask_login
 
 from app import login_manager, db, api
 from flask import session
-from flask_jwt import JWT, jwt_required, current_identity
+from flask_jwt import jwt_required, current_identity
 from flask_restful import Resource, reqparse
 
 from .models import User
