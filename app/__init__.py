@@ -12,7 +12,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 api = Api(app)
 
-from app import models, views
+from app import models, views, jwt_functions
 
 db.create_all(app=app)
 
