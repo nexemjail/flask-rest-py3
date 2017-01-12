@@ -10,33 +10,6 @@ from .utils import ResponseCodes, template_response
 from flask_jwt import jwt_required
 
 
-class Login(Resource):
-    def __init__(self):
-        self.reqparse = login_reqparser()
-        super(Login, self).__init__()
-
-    def post(self):
-        data = self.reqparse.parse_args()
-
-        user = User.query.filter_by(email=data.get('username')).first()
-        if not user:
-            return template_response(status='Error',
-                                     code=ResponseCodes.UNPROCESSABLE_ENTITY_422,
-                                     message='Invalid credentials'),\
-                   ResponseCodes.UNPROCESSABLE_ENTITY_422
-
-        if not flask_login.login_user(user):
-            return template_response(code=ResponseCodes.SERVER_ERROR_500,
-                                     message='Error while logging in',
-                                     status='Error'),\
-                   ResponseCodes.SERVER_ERROR_500
-
-        return template_response(status='Success',
-                                 code=ResponseCodes.OK,
-                                 message='Login successful'),\
-            ResponseCodes.OK
-
-
 class Register(Resource):
     def __init__(self):
         self.reqparse = registration_reqparser()
