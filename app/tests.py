@@ -1,57 +1,72 @@
 import unittest
 
-from app import get_app
+import json
 
-from .models import User
-from .utils import ResponseCodes
+from app import get_app
+from app.utils import ResponseCodes
 
 
 class FlaskTests(unittest.TestCase):
-    BASE_URL = 'http://192.168.33.10'
     JWT_KEY = 'JWT '
     AUTH_URL = '/auth/'
     REGISTER_URL = '/register/'
+    JSON_CONTENT_TYPE = dict(
+        content_type='application/json'
+    )
 
-    USER_PAYLOAD = {
-        "email": "alex228@gmail.com",
-        "username": "alex228@gmail.com",
-        "first_name": "Alex",
-        "last_name": "Sh",
-        "password": "djangodjango",
-        "password2": "djangodjango"
-    }
+    USER_PAYLOAD = dict(
+        email="alex228@gmail.com",
+        username="alex228@gmail.com",
+        first_name="Alex",
+        last_name="Sh",
+        password="djangodjango",
+        password2="djangodjango"
+    )
 
     def get_auth_response(self):
-        return self.client.post(self.AUTH_URL, {
-            'username': self.USER_PAYLOAD['username'],
-            'password': self.USER_PAYLOAD['password']
-        })
+        with self.app.test_client() as c:
+            payload = json.dumps(dict(
+                username=self.USER_PAYLOAD['username'],
+                password=self.USER_PAYLOAD['password']
+            ))
+            return c.post(self.AUTH_URL, data=payload, **self.JSON_CONTENT_TYPE)
 
     def setUp(self):
-        import flask_login
-        from flask_sqlalchemy import SQLAlchemy
-        from flask_restful import Api
-
-        self.app = get_app('app.test_config')
-        self.db = SQLAlchemy(self.app)
-        login_manager = flask_login.LoginManager()
-        login_manager.init_app(self.app)
-        self.api = Api(self.app)
-
+        from app import app, db, api
         from app import models, views, jwt_functions
 
+        self.app = app
+        self.app.config.from_object('app.test_config')
+        self.db = db
+        self.api = api
+
         self.db.create_all(app=self.app)
-        self.client = self.app.test_client()
-        self.app.run('0.0.0.0', 9000)
 
     def tearDown(self):
-        self.db.drop_all()
         self.db.session.remove()
+        self.db.drop_all()
 
     def test_registration(self):
+        with self.app.test_client() as c:
+            response = c.post(self.REGISTER_URL, data=json.dumps(self.USER_PAYLOAD),
+                              **self.JSON_CONTENT_TYPE)
+            self.assertEqual(response.status_code, ResponseCodes.CREATED)
 
-        response = self.client.post(self.REGISTER_URL, data=self.USER_PAYLOAD,
-                                    headers={'Content-Type': 'application/json'})
+    def test_user_already_exists(self):
+        with self.app.test_client() as c:
+            payload = json.dumps(self.USER_PAYLOAD)
+            c.post(self.REGISTER_URL, data=payload, **self.JSON_CONTENT_TYPE)
+            response = c.post(self.REGISTER_URL, data=payload, **self.JSON_CONTENT_TYPE)
+            self.assertEqual(response.status_code, ResponseCodes.BAD_REQUEST_400)
 
-        self.assertEqual(response.status_code, ResponseCodes.CREATED)
+    def test_login_successful(self):
+        with self.app.test_client() as c:
+            payload = json.dumps(self.USER_PAYLOAD)
+            c.post(self.REGISTER_URL, data=payload, **self.JSON_CONTENT_TYPE)
+            response = self.get_auth_response()
+            self.assertEqual(response.status_code, ResponseCodes.OK)
+            self.assertTrue('token' in json.loads(str(response.data, encoding='utf8')))
 
+
+if __name__ == '__main__':
+    unittest.main()

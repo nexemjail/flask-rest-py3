@@ -9,14 +9,15 @@ from flask_sqlalchemy import SQLAlchemy
 def get_app(config):
     app = Flask(__name__)
     app.config.from_object(config)
-    return app
 
+    db = SQLAlchemy(app)
+    login_manager = flask_login.LoginManager()
+    login_manager.init_app(app)
+    api = Api(app)
 
-app = get_app('app.config')
-db = SQLAlchemy(app)
-login_manager = flask_login.LoginManager()
-login_manager.init_app(app)
-api = Api(app)
+    return app, db, api
+
+app, db, api = get_app('app.config')
 
 from app import models, views, jwt_functions
 
