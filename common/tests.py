@@ -3,9 +3,9 @@ import unittest
 import json
 from wsgiref.headers import Headers
 
-from app import get_app
-from app.models import User
-from app.utils import ResponseCodes
+from common import get_app
+from common.models import User
+from common.utils import ResponseCodes
 
 from datetime import datetime, timedelta
 from freezegun import freeze_time
@@ -37,11 +37,11 @@ class FlaskTests(unittest.TestCase):
             return c.post(self.AUTH_URL, data=payload, **self.JSON_CONTENT_TYPE)
 
     def setUp(self):
-        from app import app, db, api
-        from app import models, views, jwt_functions
+        from common import app, db, api
+        from common import models, views, jwt_functions
 
         self.app = app
-        self.app.config.from_object('app.test_config')
+        self.app.config.from_object('common.test_config')
         self.db = db
         self.api = api
 

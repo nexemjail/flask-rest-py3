@@ -1,4 +1,4 @@
-from app import app
+from common import app
 from flask import jsonify
 from flask_jwt import JWT
 from werkzeug.security import safe_str_cmp

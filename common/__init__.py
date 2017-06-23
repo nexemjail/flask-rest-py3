@@ -17,10 +17,12 @@ def get_app(config):
 
     return app, db, api
 
-app, db, api = get_app('app.config')
+app, db, api = get_app('common.config')
 
-from app import models, views, jwt_functions
+from common import models, views, jwt_functions
 
 db.create_all(app=app)
 
+from events import app as events_app
+app.register_blueprint(events_app)
 

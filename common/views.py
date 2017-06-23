@@ -1,6 +1,6 @@
 import flask_login
 
-from app import db, api
+from common import db, api
 from flask_restful import Resource
 
 from .models import User
