@@ -20,16 +20,31 @@ class EventStatus(db.Model, decl_base):
 
     __tablename__ = 'event_status'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     status = db.Column(ChoiceType(EVENT_CHOICES))
+
+
+LabelsEvents = db.Table(
+    'labels_events',
+    decl_base.metadata,
+    db.Column('label_id', db.Integer, db.ForeignKey('label.id')),
+    db.Column('event_id', db.Integer, db.ForeignKey('event.id'))
+)
+
+# class LabelsEvents(db.Table, decl_base):
+#
+#     __tablename__ = 'labels_events'
+#
+#     label_id = db.Column(db.Integer, db.ForeignKey('label.id'))
+#     event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
 
 
 class Label(db.Model, decl_base):
 
     __tablename__ = 'label'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100))
+    events = db.relationship('Event', secondary=LabelsEvents,
+                             back_populates='labels')
 
     @classmethod
     def create_non_existing(cls, labels_list):
@@ -45,18 +60,12 @@ class Label(db.Model, decl_base):
         Label.create_non_existing(label_list)
         return Label.objects.filter(name__in=label_list)
 
-labels_secondary = db.Table('labels',
-    db.Column('label_id', db.Integer, db.ForeignKey(Label.id)),
-    db.Column('user_id', db.Integer, db.ForeignKey(User.id))
-)
-
 
 class Event(db.Model, decl_base):
 
     __tablename__ = 'event'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     description = db.Column(db.Text, nullable=True)
     start = db.Column(db.DateTime, nullable=False)
     end = db.Column(db.DateTime, nullable=False)
@@ -70,16 +79,14 @@ class Event(db.Model, decl_base):
     place = db.Column(db.String(500), nullable=True)
     # place = models.CharField(max_length=500, null=True)
     # status = models.ForeignKey(EventStatus)
-    status_id = db.ForeignKey(EventStatus.id, name='status')
-    labels = db.relationship(Label, secondary=labels_secondary,
-                             backref=db.backref('events', lazy='dynamic'))
+    status_id = db.ForeignKey('event_status.id', name='status')
+    labels = db.relationship('Label', secondary=LabelsEvents,
+                             back_populates='events')
+    media = db.relationship('EventMedia')
 
 
 class EventMedia(db.Model, decl_base):
 
     __tablename__ = 'event_media'
 
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    event_id = db.ForeignKey(Event.id, related_name='media')
-
-    # media = db.File.FileField(null=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', related_name='media'))

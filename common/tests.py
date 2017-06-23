@@ -1,10 +1,6 @@
 import unittest
 
 import json
-from wsgiref.headers import Headers
-
-from common import get_app
-from common.models import User
 from common.utils import ResponseCodes
 
 from datetime import datetime, timedelta
