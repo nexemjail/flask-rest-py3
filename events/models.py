@@ -25,17 +25,9 @@ class EventStatus(db.Model, decl_base):
 
 LabelsEvents = db.Table(
     'labels_events',
-    decl_base.metadata,
     db.Column('label_id', db.Integer, db.ForeignKey('label.id')),
     db.Column('event_id', db.Integer, db.ForeignKey('event.id'))
 )
-
-# class LabelsEvents(db.Table, decl_base):
-#
-#     __tablename__ = 'labels_events'
-#
-#     label_id = db.Column(db.Integer, db.ForeignKey('label.id'))
-#     event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
 
 
 class Label(db.Model, decl_base):
@@ -43,8 +35,7 @@ class Label(db.Model, decl_base):
     __tablename__ = 'label'
 
     name = db.Column(db.String(100))
-    events = db.relationship('Event', secondary=LabelsEvents,
-                             back_populates='labels')
+    events = db.relationship('Event', secondary=LabelsEvents)
 
     @classmethod
     def create_non_existing(cls, labels_list):
@@ -80,8 +71,7 @@ class Event(db.Model, decl_base):
     # place = models.CharField(max_length=500, null=True)
     # status = models.ForeignKey(EventStatus)
     status_id = db.ForeignKey('event_status.id', name='status')
-    labels = db.relationship('Label', secondary=LabelsEvents,
-                             back_populates='events')
+    labels = db.relationship('Label', secondary=LabelsEvents)
     media = db.relationship('EventMedia')
 
 

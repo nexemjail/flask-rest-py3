@@ -33,8 +33,7 @@ class FlaskTests(unittest.TestCase):
             return c.post(self.AUTH_URL, data=payload, **self.JSON_CONTENT_TYPE)
 
     def setUp(self):
-        from common import app, db, api
-        from common import models, views, jwt_functions
+        from . import app, db, api, models, views, jwt_functions
 
         self.app = app
         self.app.config.from_object('common.test_config')

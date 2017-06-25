@@ -12,7 +12,7 @@ class User(db.Model, decl_base, UserMixin):
     first_name = db.Column(db.String(50))
     last_name = db.Column(db.String(100))
     password = db.Column(db.String(50))
-    events = db.relationship('event', backref='user', lazy='dynamic')
+    events = db.relationship('Event', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return '{id}: {email}, {first_name} {last_name}'\

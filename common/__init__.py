@@ -19,7 +19,7 @@ def get_app(config):
 
 app, db, api = get_app('common.config')
 
-from common import models, views, jwt_functions
+from . import models, views, jwt_functions
 
 db.create_all(app=app)
 
