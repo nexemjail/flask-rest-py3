@@ -2,6 +2,8 @@ from common.database import decl_base, db
 from sqlalchemy import Enum, Enum
 from sqlalchemy_utils.types import ChoiceType
 
+from sqlalchemy.dialects.postgresql import INTERVAL
+
 from common.models import User
 
 EVENT_STATUSES = ('W', 'P', 'C')
@@ -63,13 +65,10 @@ class Event(db.Model, decl_base):
 
     periodic = db.Column(db.Boolean, default=False)
     # TODO: handle duration field
-    # period = db.Column(s)
-    # period = models.DurationField(null=True)
+    period = db.Column(INTERVAL, nullable=True)
 
     next_notification = db.Column(db.DateTime, nullable=True)
     place = db.Column(db.String(500), nullable=True)
-    # place = models.CharField(max_length=500, null=True)
-    # status = models.ForeignKey(EventStatus)
     status_id = db.ForeignKey('event_status.id', name='status')
     labels = db.relationship('Label', secondary=LabelsEvents)
     media = db.relationship('EventMedia')
