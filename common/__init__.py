@@ -4,6 +4,7 @@ from flask import Flask
 
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
 
 
 def get_app(config):
@@ -14,10 +15,11 @@ def get_app(config):
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
     api = Api(app)
+    ma = Marshmallow(app)
 
-    return app, db, api
+    return app, db, api, ma
 
-app, db, api = get_app('common.config')
+app, db, api, ma = get_app('common.config')
 
 from . import models, views, jwt_functions
 

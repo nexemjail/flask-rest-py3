@@ -13,9 +13,12 @@ aniso8601==1.2.1
 certifi==2017.4.17
 chardet==3.0.4
 click==6.7
+flask-marshmallow==0.8.0
 freezegun==0.3.9
 idna==2.5
 itsdangerous==0.24
+marshmallow==2.13.5
+marshmallow-sqlalchemy==0.13.1
 psycopg2==2.7.1
 python-dateutil==2.6.0
 pytz==2017.2
