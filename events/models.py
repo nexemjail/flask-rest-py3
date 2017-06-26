@@ -1,10 +1,10 @@
-from common.database import decl_base, db
-from sqlalchemy import Enum, Enum
+from sqlalchemy.testing.assertions import in_
+
+from common.database import decl_base, db, db_session
 from sqlalchemy_utils.types import ChoiceType
 
 from sqlalchemy.dialects.postgresql import INTERVAL
 
-from common.models import User
 
 EVENT_STATUSES = ('W', 'P', 'C')
 EVENT_CHOICES = (
@@ -19,7 +19,6 @@ EVENT_CREATE_CHOICES = (
 
 
 class EventStatus(db.Model, decl_base):
-
     __tablename__ = 'event_status'
 
     status = db.Column(ChoiceType(EVENT_CHOICES))
@@ -33,7 +32,6 @@ LabelsEvents = db.Table(
 
 
 class Label(db.Model, decl_base):
-
     __tablename__ = 'label'
 
     name = db.Column(db.String(100))
@@ -41,21 +39,24 @@ class Label(db.Model, decl_base):
 
     @classmethod
     def create_non_existing(cls, labels_list):
-        existing_labels = Label.objects.filter(name__in=labels_list)\
-            .values_list('name', flat=True)
-        not_existing_labels = set(labels_list) - set(existing_labels)
 
-        Label.objects.bulk_create((Label(name=name) for name
-                                   in not_existing_labels))
+        existing_labels = db_session\
+            .query(Label, Label.name)\
+            .filter(in_(Label.name, labels_list))
+
+        not_existing_labels = set(labels_list) - set(existing_labels.all())
+
+
+        db_session.add_all((Label(name=name) for name in not_existing_labels))
+        db_session.commit()
 
     @classmethod
     def create_all(cls, label_list):
         Label.create_non_existing(label_list)
-        return Label.objects.filter(name__in=label_list)
+        return db_session.query(Label).filter(in_(Label.name, label_list))
 
 
 class Event(db.Model, decl_base):
-
     __tablename__ = 'event'
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -75,7 +76,7 @@ class Event(db.Model, decl_base):
 
 
 class EventMedia(db.Model, decl_base):
-
     __tablename__ = 'event_media'
 
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id', related_name='media'))
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id',
+                                                   related_name='media'))
