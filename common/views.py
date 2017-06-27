@@ -1,4 +1,5 @@
 import flask_login
+from flask.ext.jwt import current_identity
 
 from common import db, api
 from flask_restful import Resource
@@ -51,5 +52,5 @@ class UserList(Resource):
                                  data=user.to_json()),\
             ResponseCodes.OK
 
-api.add_resource(Register, '/register/')
-api.add_resource(UserList, '/<int:user_id>/')
+api.add_resource(Register, '/users/user/register/')
+api.add_resource(UserList, '/users/user/<int:user_id>/')
