@@ -37,11 +37,11 @@ class Register(Resource):
             ResponseCodes.CREATED
 
 
-class UserList(Resource):
+class UserDetail(Resource):
     @jwt_required()
     def get(self, user_id):
         user = User.query.filter_by(id=user_id).first()
-        if not user:
+        if not user or current_identity != user:
             return template_response(status='Error',
                                      code=ResponseCodes.NOT_FOUND_404,
                                      message='Not found'), \
@@ -53,4 +53,4 @@ class UserList(Resource):
             ResponseCodes.OK
 
 api.add_resource(Register, '/users/user/register/')
-api.add_resource(UserList, '/users/user/<int:user_id>/')
+api.add_resource(UserDetail, '/users/user/<int:user_id>/')

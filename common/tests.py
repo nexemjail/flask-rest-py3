@@ -10,7 +10,8 @@ from freezegun import freeze_time
 class FlaskTests(unittest.TestCase):
     JWT_KEY = 'JWT '
     AUTH_URL = '/auth/'
-    REGISTER_URL = '/register/'
+    REGISTER_URL = '/users/user/register/'
+    USER_INFO_URL = '/users/user/{}/'
     JSON_CONTENT_TYPE = dict(
         content_type='application/json'
     )
@@ -86,7 +87,8 @@ class FlaskTests(unittest.TestCase):
             response = self.get_auth_response()
             token = json.loads(str(response.data, encoding='utf-8')).get('token')
 
-            response = c.get('/{}/'.format(user_id), headers={'Authorization': self.JWT_KEY + token})
+            response = c.get(self.USER_INFO_URL.format(user_id), headers={
+                'Authorization': self.JWT_KEY + token})
 
             response_data = json.loads(str(response.data, encoding='utf-8')).get('data')
 
@@ -102,7 +104,8 @@ class FlaskTests(unittest.TestCase):
             response = self.get_auth_response()
             token = json.loads(str(response.data, encoding='utf-8')).get('token')
 
-            response = c.get('/{}/'.format(user_id), headers={'Authorization': self.JWT_KEY + token + 'feed'})
+            response = c.get(self.USER_INFO_URL.format(user_id), headers={
+                'Authorization': self.JWT_KEY + token + 'feed'})
 
             self.assertEqual(response.status_code, ResponseCodes.UNAUTHORIZED_401)
 
@@ -117,7 +120,8 @@ class FlaskTests(unittest.TestCase):
             token = json.loads(str(response.data, encoding='utf-8')).get('token')
 
             with freeze_time(datetime.now() + timedelta(seconds=320)):
-                response = c.get('/{}/'.format(user_id), headers={'Authorization': self.JWT_KEY + token})
+                response = c.get(self.USER_INFO_URL.format(user_id), headers={
+                    'Authorization': self.JWT_KEY + token})
 
                 self.assertEqual(response.status_code, ResponseCodes.UNAUTHORIZED_401)
 
