@@ -1,48 +1,13 @@
 import flask_login
 
-from app import login_manager, db, api
-from flask import session
-from flask_jwt import JWT, jwt_required, current_identity
-from flask_restful import Resource, reqparse
+from app import db, api
+from flask_restful import Resource
 
 from .models import User
 from .parsers import login_reqparser, registration_reqparser
 from .utils import ResponseCodes, template_response
 
-
-class Logout(Resource):
-    @flask_login.login_required
-    def get(self):
-        flask_login.logout_user()
-        session.update()
-        return {'detail': 'you are logged out'}, ResponseCodes.OK
-
-
-class Login(Resource):
-    def __init__(self):
-        self.reqparse = login_reqparser()
-        super(Login, self).__init__()
-
-    def post(self):
-        data = self.reqparse.parse_args()
-
-        user = User.query.filter_by(email=data.get('username')).first()
-        if not user:
-            return template_response(status='Error',
-                                     code=ResponseCodes.UNPROCESSABLE_ENTITY_422,
-                                     message='Invalid credentials'),\
-                   ResponseCodes.UNPROCESSABLE_ENTITY_422
-
-        if not flask_login.login_user(user):
-            return template_response(code=ResponseCodes.SERVER_ERROR_500,
-                                     message='Error while logging in',
-                                     status='Error'),\
-                   ResponseCodes.SERVER_ERROR_500
-
-        return template_response(status='Success',
-                                 code=ResponseCodes.OK,
-                                 message='Login successful'),\
-            ResponseCodes.OK
+from flask_jwt import jwt_required
 
 
 class Register(Resource):
@@ -71,13 +36,8 @@ class Register(Resource):
             ResponseCodes.CREATED
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.filter_by(id=int(user_id)).first()
-
-
 class UserList(Resource):
-    @flask_login.login_required
+    @jwt_required()
     def get(self, user_id):
         user = User.query.filter_by(id=user_id).first()
         if not user:
@@ -92,6 +52,4 @@ class UserList(Resource):
             ResponseCodes.OK
 
 api.add_resource(Register, '/register/')
-api.add_resource(Login, '/login/')
-api.add_resource(Logout, '/logout/')
 api.add_resource(UserList, '/<int:user_id>/')
