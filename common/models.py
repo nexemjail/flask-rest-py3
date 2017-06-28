@@ -1,23 +1,23 @@
-from app import db
 from flask_login import UserMixin
-from sqlalchemy.ext.declarative import declarative_base
-
-base = declarative_base()
+from .database import decl_base, db
 
 
-class User(db.Model, base, UserMixin):
+class User(db.Model, decl_base, UserMixin):
 
-    __tablename__ = 'flask_user'
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(50))
+    username = db.Column(db.String(50), unique=True)
     email = db.Column(db.String(100), unique=True)
     first_name = db.Column(db.String(50))
     last_name = db.Column(db.String(100))
     password = db.Column(db.String(50))
+    events = db.relationship('Event', backref='user', lazy='dynamic')
 
     def __repr__(self):
-        return '{}: {}, {} {}'.format(self.id, self.email, self.first_name, self.last_name)
+        return '{id}: {email}, {first_name} {last_name}'\
+            .format(id=self.id,email=self.email,
+                    first_name=self.first_name, last_name=self.last_name)
 
     def to_json(self):
         return dict(
