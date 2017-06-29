@@ -77,6 +77,6 @@ class Event(db.Model, decl_base):
 
 class EventMedia(db.Model, decl_base):
     __tablename__ = 'events_media'
-
+    # TODO: add file here!
     event_id = db.Column(db.Integer, db.ForeignKey('events.id',
                                                    related_name='media'))
