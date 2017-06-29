@@ -1,7 +1,8 @@
 from sqlalchemy.testing.assertions import in_
 
-from common.database import decl_base, db, db_session
+from common.database import decl_base, db_session
 from sqlalchemy_utils.types import ChoiceType
+from common import db
 
 from sqlalchemy.dialects.postgresql import INTERVAL
 
@@ -17,8 +18,12 @@ EVENT_CREATE_CHOICES = (
     ('P', 'Passed'),
 )
 
+class Base(db.Model, decl_base):
+    __abstract__ = True
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-class EventStatus(db.Model, decl_base):
+
+class EventStatus(Base, decl_base):
     __tablename__ = 'event_statuses'
 
     status = db.Column(ChoiceType(EVENT_CHOICES))
@@ -31,7 +36,7 @@ LabelsEvents = db.Table(
 )
 
 
-class Label(db.Model, decl_base):
+class Label(Base, decl_base):
     __tablename__ = 'labels'
 
     name = db.Column(db.String(100))
@@ -56,7 +61,7 @@ class Label(db.Model, decl_base):
         return db_session.query(Label).filter(in_(Label.name, label_list))
 
 
-class Event(db.Model, decl_base):
+class Event(Base, decl_base):
     __tablename__ = 'events'
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -75,7 +80,7 @@ class Event(db.Model, decl_base):
     media = db.relationship('EventMedia')
 
 
-class EventMedia(db.Model, decl_base):
+class EventMedia(Base, decl_base):
     __tablename__ = 'events_media'
     # TODO: add file here!
     event_id = db.Column(db.Integer, db.ForeignKey('events.id',

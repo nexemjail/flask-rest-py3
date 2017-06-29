@@ -1,15 +1,19 @@
 import flask_login
 from flask.ext.jwt import current_identity
 
-from common import db, api
-from flask_restful import Resource
+from common import db
+from flask_restful import Resource, Api
 
 from .models import User
 from .parsers import login_reqparser, registration_reqparser
 from .utils import ResponseCodes, template_response
 
 from flask_jwt import jwt_required
+from flask import Blueprint
 
+
+api_bp = Blueprint('users', __name__)
+api = Api(api_bp)
 
 class Register(Resource):
     def __init__(self):
@@ -29,6 +33,7 @@ class Register(Resource):
         user = User(**data)
         db.session.add(user)
         db.session.commit()
+        print(user)
 
         return template_response(status='Success',
                                  code=ResponseCodes.CREATED,

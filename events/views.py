@@ -1,6 +1,7 @@
+from flask.blueprints import Blueprint
 from flask.ext.jwt import current_identity
+from flask.ext.restful import Api
 
-from common import api
 from flask_restful import Resource
 
 from common.database import db_session
@@ -11,6 +12,9 @@ from .models import Event
 from flask_jwt import jwt_required
 from flask import request
 
+
+api_bp = Blueprint('events', __name__)
+api = Api(api_bp)
 
 class EventDetail(Resource):
     @jwt_required()

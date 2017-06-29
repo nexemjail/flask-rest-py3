@@ -1,7 +1,7 @@
+import os
 import flask_login
 
 from flask import Flask
-
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -19,12 +19,21 @@ def get_app(config):
 
     return app, db, api, ma
 
-app, db, api, ma = get_app('common.config')
 
-from . import models, views, jwt_functions
+def create_all(app, db):
+    from . import models, views, jwt_functions
+    db.create_all(app=app)
+    db.session.commit()
 
-db.create_all(app=app)
 
-from events import app as events_app
-app.register_blueprint(events_app)
+def register_blueprints(app):
+    from .views import api_bp as users_blueprint
+    app.register_blueprint(users_blueprint)
 
+    from events import blueprint as events_blueprint
+    app.register_blueprint(events_blueprint)
+
+config_file = 'common.test_config' if os.environ.get('APP_TESTING') else \
+    'common.config'
+app, db, api, ma = get_app(config_file)
+register_blueprints(app)
