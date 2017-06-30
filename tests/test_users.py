@@ -1,4 +1,7 @@
 import json
+
+import jwt
+
 from common.utils import ResponseCodes
 
 from datetime import datetime, timedelta
@@ -96,8 +99,9 @@ def test_invalid_token(test_client):
     token = json.loads(str(response.data, encoding='utf-8'))\
         .get('token')
 
+    invalid_token = jwt.encode(payload={}, key='invalid_key')
     response = test_client.get(USER_INFO_URL.format(user_id), headers={
-        'Authorization': JWT_KEY + token + 'feed'})
+        'Authorization': JWT_KEY + str(invalid_token)})
 
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
@@ -116,4 +120,4 @@ def test_expired_token(test_client):
         response = test_client.get(USER_INFO_URL.format(user_id), headers={
             'Authorization': JWT_KEY + token})
 
-        assert response.status_code ==ResponseCodes.UNAUTHORIZED_401
+        assert response.status_code == ResponseCodes.UNAUTHORIZED_401

@@ -8,11 +8,11 @@ from .parsers import login_reqparser, registration_reqparser
 from .utils import ResponseCodes, template_response
 
 from flask_jwt import jwt_required
-from flask import Blueprint
+from flask import Blueprint, jsonify
 from common.database import db_session
 
-api_bp = Blueprint('users', __name__)
-api = Api(api_bp)
+app_bp = Blueprint('users', __name__)
+api = Api(app_bp)
 
 class Register(Resource):
     def __init__(self):
@@ -59,3 +59,17 @@ class UserDetail(Resource):
 
 api.add_resource(Register, '/users/user/register/')
 api.add_resource(UserDetail, '/users/user/<int:user_id>/')
+
+
+# from flask_jwt import JWTError
+# from jwt.exceptions import InvalidTokenError
+
+
+@app_bp.errorhandler(Exception)
+def handle_invalid_token_error(error):
+    response = jsonify({'error': 'Invalid token'})
+    response.status_code = ResponseCodes.UNAUTHORIZED_401
+    return response
+
+# app_bp.register_error_handler(JWTError, handle_invalid_token_error)
+# app_bp.register_error_handler(InvalidTokenError, handle_invalid_token_error)

@@ -13,13 +13,12 @@ def db_session():
     decl_base.metadata.drop_all()
     session.remove()
 
-@pytest.yield_fixture(scope='function')
+@pytest.yield_fixture(scope='function', autouse=True)
 def clearer(db_session):
-    db_session.query(User).delete()
     yield
     db_session.query(User).delete()
 
 @pytest.yield_fixture(scope='function')
-def test_client(db_session, clearer):
+def test_client(db_session):
     with db_session.begin(subtransactions=True) as t:
         yield application.test_client()
