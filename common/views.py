@@ -1,4 +1,3 @@
-import flask_login
 from flask.ext.jwt import current_identity
 
 from common import db
@@ -10,7 +9,7 @@ from .utils import ResponseCodes, template_response
 
 from flask_jwt import jwt_required
 from flask import Blueprint
-
+from common.database import db_session
 
 api_bp = Blueprint('users', __name__)
 api = Api(api_bp)
@@ -23,7 +22,9 @@ class Register(Resource):
     def post(self):
         data = self.reqparse.parse_args()
 
-        users_found = User.query.filter_by(username=data['username']).count()
+        users_found = db_session.query(User)\
+            .filter(User.username==data['username'])\
+            .count()
         if users_found > 0:
             return template_response(code=ResponseCodes.BAD_REQUEST_400,
                                      status='Error',
@@ -31,9 +32,8 @@ class Register(Resource):
                    ResponseCodes.BAD_REQUEST_400
 
         user = User(**data)
-        db.session.add(user)
-        db.session.commit()
-        print(user)
+        db_session.add(user)
+        db_session.flush()
 
         return template_response(status='Success',
                                  code=ResponseCodes.CREATED,

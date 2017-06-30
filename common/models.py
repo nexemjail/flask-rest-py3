@@ -1,23 +1,19 @@
 from flask_login import UserMixin
-from .database import decl_base
-from common import db
+from sqlalchemy.orm import relationship
 
-
-class Base(db.Model, decl_base):
-    __abstract__ = True
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+from .database import Base
+from sqlalchemy import Column, String
 
 
 class User(Base, UserMixin):
     __tablename__ = 'users'
 
-    username = db.Column(db.String(50), unique=True)
-    email = db.Column(db.String(100), unique=True)
-    first_name = db.Column(db.String(50))
-    last_name = db.Column(db.String(100))
-    password = db.Column(db.String(50))
-    events = db.relationship('Event', backref='user', lazy='dynamic')
+    username = Column(String(50), unique=True)
+    email = Column(String(100), unique=True)
+    first_name = Column(String(50))
+    last_name = Column(String(100))
+    password = Column(String(50))
+    events = relationship('Event', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return '{id}: {email}, {first_name} {last_name}'\
