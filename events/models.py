@@ -1,7 +1,12 @@
 from sqlalchemy.testing.assertions import in_
 
-from common.database import decl_base, db, db_session
+from common.database import db_session, Base, decl_base
 from sqlalchemy_utils.types import ChoiceType
+from sqlalchemy import (
+    Column, Integer, String, Text, Table, \
+    ForeignKey, DateTime, Boolean
+)
+from sqlalchemy.orm import relationship
 
 from sqlalchemy.dialects.postgresql import INTERVAL
 
@@ -18,24 +23,24 @@ EVENT_CREATE_CHOICES = (
 )
 
 
-class EventStatus(db.Model, decl_base):
+class EventStatus(Base):
     __tablename__ = 'event_statuses'
 
-    status = db.Column(ChoiceType(EVENT_CHOICES))
+    status = Column(ChoiceType(EVENT_CHOICES))
 
 
-LabelsEvents = db.Table(
-    'labels_events',
-    db.Column('label_id', db.Integer, db.ForeignKey('labels.id')),
-    db.Column('event_id', db.Integer, db.ForeignKey('events.id'))
+LabelsEvents = Table('labels_events',
+    decl_base.metadata,
+    Column('label_id', Integer, ForeignKey('labels.id')),
+    Column('event_id', Integer, ForeignKey('events.id'))
 )
 
 
-class Label(db.Model, decl_base):
+class Label(Base):
     __tablename__ = 'labels'
 
-    name = db.Column(db.String(100))
-    events = db.relationship('Event', secondary=LabelsEvents)
+    name = Column(String(100))
+    events = relationship('Event', secondary=LabelsEvents)
 
     @classmethod
     def create_non_existing(cls, labels_list):
@@ -56,27 +61,27 @@ class Label(db.Model, decl_base):
         return db_session.query(Label).filter(in_(Label.name, label_list))
 
 
-class Event(db.Model, decl_base):
+class Event(Base):
     __tablename__ = 'events'
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    description = db.Column(db.Text, nullable=True)
-    start = db.Column(db.DateTime, nullable=False)
-    end = db.Column(db.DateTime, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    description = Column(Text, nullable=True)
+    start = Column(DateTime, nullable=False)
+    end = Column(DateTime, nullable=False)
 
-    periodic = db.Column(db.Boolean, default=False)
+    periodic = Column(Boolean, default=False)
     # TODO: handle duration field
-    period = db.Column(INTERVAL, nullable=True)
+    period = Column(INTERVAL, nullable=True)
 
-    next_notification = db.Column(db.DateTime, nullable=True)
-    place = db.Column(db.Text, nullable=True)
-    status_id = db.ForeignKey('event_statuses.id', name='status')
-    labels = db.relationship('Label', secondary=LabelsEvents)
-    media = db.relationship('EventMedia')
+    next_notification = Column(DateTime, nullable=True)
+    place = Column(Text, nullable=True)
+    status_id = ForeignKey('event_statuses.id', name='status')
+    labels = relationship('Label', secondary=LabelsEvents)
+    media = relationship('EventMedia')
 
 
-class EventMedia(db.Model, decl_base):
+class EventMedia(Base):
     __tablename__ = 'events_media'
-
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id',
+    # TODO: add file here!
+    event_id = Column(Integer, ForeignKey('events.id',
                                                    related_name='media'))

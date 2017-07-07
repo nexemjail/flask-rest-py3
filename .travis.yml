@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.6"
+install: "pip install -r requirements.txt"
+env:
+  RUN_MODE=CI
+services:
+  - postgresql
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+script: pytest

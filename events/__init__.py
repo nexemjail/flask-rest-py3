@@ -1,6 +1,2 @@
-from flask.blueprints import Blueprint
-
 from .models import *
-from .views import *
-
-app = Blueprint('blueprint', __name__, template_folder='templates')
+from .views import api_bp as blueprint

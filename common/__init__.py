@@ -1,7 +1,7 @@
+import os
 import flask_login
 
 from flask import Flask
-
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -19,12 +19,32 @@ def get_app(config):
 
     return app, db, api, ma
 
-app, db, api, ma = get_app('common.config')
 
-from . import models, views, jwt_functions
+def create_all(app, db):
+    from . import models, views, jwt_functions
+    db.create_all(app=app)
+    db.session.commit()
 
-db.create_all(app=app)
 
-from events import app as events_app
-app.register_blueprint(events_app)
+def register_blueprints(app):
+    from .views import app_bp as users_blueprint
+    # import is used to register /auth/ endpoint
+    from . import jwt_functions
+    app.register_blueprint(users_blueprint, )
 
+    from events import blueprint as events_blueprint
+    app.register_blueprint(events_blueprint)
+
+config_mapping = {
+    'CI': 'common.ci_config',
+    'DEV': 'common.config',
+    'TEST': 'common.test_config'
+}
+
+run_mode = os.environ.get('RUN_MODE')
+if run_mode not in config_mapping:
+    raise Exception('Invalid run mode specified')
+
+config_file = config_mapping[run_mode]
+app, db, api, ma = get_app(config_file)
+register_blueprints(app)
