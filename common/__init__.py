@@ -35,7 +35,16 @@ def register_blueprints(app):
     from events import blueprint as events_blueprint
     app.register_blueprint(events_blueprint)
 
-config_file = 'common.test_config' if os.environ.get('APP_TESTING') else \
-    'common.config'
+config_mapping = {
+    'CI': 'common.ci_config',
+    'DEV': 'common.config',
+    'TEST': 'common.test_config'
+}
+
+run_mode = os.environ.get('RUN_MODE')
+if run_mode not in config_mapping:
+    raise Exception('Invalid run mode specified')
+
+config_file = config_mapping[run_mode]
 app, db, api, ma = get_app(config_file)
 register_blueprints(app)
