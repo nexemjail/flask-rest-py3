@@ -57,8 +57,8 @@ def test_registration(test_client):
 
 
 def test_user_already_exists(test_client):
-    user_paylaod = fake_user_payload()
-    payload = json.dumps(user_paylaod)
+    user_payload = fake_user_payload()
+    payload = json.dumps(user_payload)
     test_client.post(REGISTER_URL,
            data=payload,
            **JSON_CONTENT_TYPE)
