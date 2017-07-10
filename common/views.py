@@ -65,8 +65,8 @@ class UserDetail(BaseResource):
                                  data=user.to_json()),\
             ResponseCodes.OK
 
-api.add_resource(Register, '/users/user/register/')
-api.add_resource(UserDetail, '/users/user/<int:user_id>/')
+api.add_resource(Register, '/users/user/register/', endpoint='register')
+api.add_resource(UserDetail, '/users/user/<int:user_id>/', endpoint='detail')
 
 
 class InvalidJWTException(Exception):

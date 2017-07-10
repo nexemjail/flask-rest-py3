@@ -2,6 +2,8 @@ import json
 import factory
 
 import jwt
+from flask import url_for
+from common import app
 
 from common.utils import ResponseCodes
 
@@ -10,12 +12,18 @@ from freezegun import freeze_time
 
 JWT_KEY = 'JWT '
 AUTH_URL = '/auth/'
-REGISTER_URL = '/users/user/register/'
-USER_INFO_URL = '/users/user/{}/'
+
+with app.test_request_context():
+    REGISTER_URL = url_for('users.register')
+
 JSON_CONTENT_TYPE = dict(
     content_type='application/json'
 )
 
+
+def user_detail_url(user_id):
+    with app.test_request_context():
+        return url_for(endpoint='users.detail', user_id=user_id)
 
 class UserFactory(factory.DictFactory):
     email = factory.Faker('email')
@@ -96,8 +104,8 @@ def test_get_info(test_client):
     token = json.loads(str(response.data, encoding='utf-8'))\
         .get('token')
 
-    response = test_client.get(USER_INFO_URL.format(user_id), headers={
-        'Authorization': JWT_KEY + token})
+    response = test_client.get(user_detail_url(user_id=user_id),
+                               headers={'Authorization': JWT_KEY + token})
 
     response_data = json.loads(str(response.data, encoding='utf-8'))\
         .get('data')
@@ -118,8 +126,9 @@ def test_invalid_token(test_client):
     assert response.status_code == 200
 
     invalid_token = jwt.encode(payload={}, key='invalid_key')
-    response = test_client.get(USER_INFO_URL.format(user_id), headers={
-        'Authorization': JWT_KEY + str(invalid_token)})
+    response = test_client.get(user_detail_url(user_id=user_id),
+                               headers={'Authorization':
+                                            JWT_KEY + str(invalid_token)})
 
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
@@ -138,7 +147,7 @@ def test_expired_token(test_client):
         .get('token')
 
     with freeze_time(datetime.now() + timedelta(seconds=320)):
-        response = test_client.get(USER_INFO_URL.format(user_id), headers={
-            'Authorization': JWT_KEY + token})
+        response = test_client.get(user_detail_url(user_id=user_id),
+                                   headers={'Authorization': JWT_KEY + token})
 
         assert response.status_code == ResponseCodes.UNAUTHORIZED_401
