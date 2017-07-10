@@ -13,7 +13,7 @@ from common.utils import ResponseCodes
 from marshmallow import Schema, fields
 
 from test_utils.helpers import get_auth_header, register_and_login_user, \
-    JSON_CONTENT_TYPE
+    JSON_CONTENT_TYPE, dict_contains_subset
 
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
@@ -85,8 +85,9 @@ def test_create_event(test_client):
     event_payload = EventPayloadFactory()
     dumped_event_payload = EventPayloadSchema().dumps(event_payload)
     response = test_client.post(CREATE_URL,
-                     data=dumped_event_payload.data,
-                      headers=dict(JSON_CONTENT_TYPE, **get_auth_header(
-                          token)))
+                                data=dumped_event_payload.data,
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
     # TODO: provide more asserts!
+    # TODO: compare dates!
     assert response.status_code == ResponseCodes.CREATED

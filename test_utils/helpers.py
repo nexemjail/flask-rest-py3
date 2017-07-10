@@ -47,3 +47,9 @@ def register_and_login_user(test_client, user_payload=None):
         .get('token')
     return user_payload, token
 
+
+def dict_contains_subset(child, parent):
+    for k, v in child.items():
+        if parent.get(k) != v:
+            return False
+    return True

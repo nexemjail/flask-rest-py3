@@ -21,5 +21,6 @@ def identity(payload):
     user_id = payload['identity']
     return User.query.get(user_id)
 
+
 jwt = JWT(app, authenticate, identity)
 jwt.auth_response_handler(auth_response_handler)

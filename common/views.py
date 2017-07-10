@@ -1,4 +1,4 @@
-from flask.ext.jwt import current_identity, JWTError
+from flask_jwt import JWTError
 
 from flask_restful import Resource, Api
 
@@ -6,7 +6,7 @@ from .models import User
 from .parsers import registration_reqparser
 from .utils import ResponseCodes, template_response
 
-from flask_jwt import jwt_required
+from flask_jwt import jwt_required, current_identity
 from flask import Blueprint, jsonify
 from common.database import db_session
 
