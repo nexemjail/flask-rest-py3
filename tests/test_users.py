@@ -1,4 +1,5 @@
 import json
+import factory
 
 import jwt
 
@@ -15,20 +16,24 @@ JSON_CONTENT_TYPE = dict(
     content_type='application/json'
 )
 
-USER_PAYLOAD = dict(
-    email="alex228@gmail.com",
-    username="alex228@gmail.com",
-    first_name="Alex",
-    last_name="Sh",
-    password="djangodjango",
-    password2="djangodjango"
-)
+
+class UserFactory(factory.DictFactory):
+    email = factory.Faker('email')
+    username = factory.Sequence(lambda n: 'unique_user_{0:04}'.format(n))
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    password = factory.Faker('password')
+    password2 = factory.SelfAttribute('password')
 
 
-def get_auth_response(test_client):
+def fake_user_payload():
+    return UserFactory()
+
+
+def get_auth_response(test_client, username, password):
     payload = json.dumps(dict(
-        username=USER_PAYLOAD['username'],
-        password=USER_PAYLOAD['password']
+        username=username,
+        password=password
     ))
     return test_client.post(AUTH_URL,
                   data=payload,
@@ -36,14 +41,16 @@ def get_auth_response(test_client):
 
 
 def test_registration(test_client):
+    user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(USER_PAYLOAD),
+                      data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
     assert response.status_code == ResponseCodes.CREATED
 
 
 def test_user_already_exists(test_client):
-    payload = json.dumps(USER_PAYLOAD)
+    user_paylaod = fake_user_payload()
+    payload = json.dumps(user_paylaod)
     test_client.post(REGISTER_URL,
            data=payload,
            **JSON_CONTENT_TYPE)
@@ -54,29 +61,38 @@ def test_user_already_exists(test_client):
 
 
 def test_login_successful(test_client):
-    payload = json.dumps(USER_PAYLOAD)
+    user_payload = fake_user_payload()
+    payload = json.dumps(user_payload)
     test_client.post(REGISTER_URL, data=payload, **JSON_CONTENT_TYPE)
-    response = get_auth_response(test_client)
+    response = get_auth_response(test_client,
+                                 username=user_payload['username'],
+                                 password=user_payload['password'])
     assert response.status_code == ResponseCodes.OK
     assert 'token' in json.loads(str(response.data, encoding='utf8'))
 
 
 def test_login_unsuccessful(test_client):
-    payload = USER_PAYLOAD.copy()
+    user_payload = fake_user_payload()
+    payload = user_payload.copy()
     payload['username'] = 'seed'
     payload = json.dumps(payload)
     test_client.post(REGISTER_URL, data=payload, **JSON_CONTENT_TYPE)
-    response = get_auth_response(test_client)
+    response = get_auth_response(test_client,
+                                 username=user_payload['username'],
+                                 password=user_payload['password'])
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
 def test_get_info(test_client):
+    user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(USER_PAYLOAD),
+                      data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
     user = json.loads(str(response.data, encoding='utf-8')).get('data')
     user_id = user.get('id')
 
-    response = get_auth_response(test_client)
+    response = get_auth_response(test_client,
+                                 username=user_payload['username'],
+                                 password=user_payload['password'])
     token = json.loads(str(response.data, encoding='utf-8'))\
         .get('token')
 
@@ -86,18 +102,20 @@ def test_get_info(test_client):
     response_data = json.loads(str(response.data, encoding='utf-8'))\
         .get('data')
 
-    assert response_data['username'] == USER_PAYLOAD['username']
+    assert response_data['username'] == user_payload['username']
 
 def test_invalid_token(test_client):
+    user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(USER_PAYLOAD),
+                      data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
     user = json.loads(str(response.data, encoding='utf-8')).get('data')
     user_id = user.get('id')
 
-    response = get_auth_response(test_client)
-    token = json.loads(str(response.data, encoding='utf-8'))\
-        .get('token')
+    response = get_auth_response(test_client,
+                                 username=user_payload['username'],
+                                 password=user_payload['password'])
+    assert response.status_code == 200
 
     invalid_token = jwt.encode(payload={}, key='invalid_key')
     response = test_client.get(USER_INFO_URL.format(user_id), headers={
@@ -106,13 +124,16 @@ def test_invalid_token(test_client):
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
 def test_expired_token(test_client):
+    user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(USER_PAYLOAD),
+                      data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
     user = json.loads(str(response.data, encoding='utf-8')).get('data')
     user_id = user.get('id')
 
-    response = get_auth_response(test_client)
+    response = get_auth_response(test_client,
+                                 username=user_payload['username'],
+                                 password=user_payload['password'])
     token = json.loads(str(response.data, encoding='utf-8'))\
         .get('token')
 
