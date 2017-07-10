@@ -5,6 +5,7 @@ from flask.ext.restful import Api
 from flask_restful import Resource
 
 from common.database import db_session
+from common.utils import ResponseCodes
 from events.serializers import EventSchema, EventCreateSchema
 
 from .models import Event
@@ -33,14 +34,16 @@ class EventList(Resource):
 class EventCreate(Resource):
     @jwt_required()
     def post(self):
-        data = request.json
         # create an object instance
-        event, errors = EventCreateSchema().load(data)
+        event, errors = EventCreateSchema().load(request.get_json(force=True))
         if not errors:
             db_session.add(event)
             db_session.flush()
+            return EventSchema().dumps(event, many=False), ResponseCodes.CREATED
+        return errors, ResponseCodes.BAD_REQUEST_400
 
 
-api.add_resource(EventDetail, '/events/event/<int:event_id>')
-api.add_resource(EventCreate, '/events/event/')
-api.add_resource(EventList, '/events/event/list/')
+api.add_resource(EventDetail, '/events/event/<int:event_id>',
+                 endpoint='detail')
+api.add_resource(EventCreate, '/events/event/', endpoint='create')
+api.add_resource(EventList, '/events/event/list/', endpoint='list')

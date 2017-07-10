@@ -9,3 +9,5 @@ APP_TESTING = False
 TRAP_HTTP_EXCEPTION = True
 
 JWT_AUTH_URL_RULE = '/auth/'
+
+JWT_KEY = 'JWT'

@@ -12,9 +12,3 @@ class EventSchema(ma.ModelSchema):
 class EventCreateSchema(ma.ModelSchema):
     class Meta:
         model = Event
-
-    @post_load
-    def create_event(self, data):
-        # TODO: add create logic here
-        # return Event()
-        pass

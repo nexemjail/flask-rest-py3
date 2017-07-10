@@ -1,5 +1,4 @@
 import json
-import factory
 
 import jwt
 from flask import url_for
@@ -10,42 +9,17 @@ from common.utils import ResponseCodes
 from datetime import datetime, timedelta
 from freezegun import freeze_time
 
-JWT_KEY = 'JWT '
-AUTH_URL = '/auth/'
+from test_utils.factories import fake_user_payload
+from test_utils.helpers import REGISTER_URL, JSON_CONTENT_TYPE, \
+    get_auth_response, get_auth_header
 
-with app.test_request_context():
-    REGISTER_URL = url_for('users.register')
-
-JSON_CONTENT_TYPE = dict(
-    content_type='application/json'
-)
+JWT_KEY = app.config['JWT_KEY']
+AUTH_URL = app.config['JWT_AUTH_URL_RULE']
 
 
 def user_detail_url(user_id):
     with app.test_request_context():
         return url_for(endpoint='users.detail', user_id=user_id)
-
-class UserFactory(factory.DictFactory):
-    email = factory.Faker('email')
-    username = factory.Sequence(lambda n: 'unique_user_{0:04}'.format(n))
-    first_name = factory.Faker('first_name')
-    last_name = factory.Faker('last_name')
-    password = factory.Faker('password')
-    password2 = factory.SelfAttribute('password')
-
-
-def fake_user_payload():
-    return UserFactory()
-
-
-def get_auth_response(test_client, username, password):
-    payload = json.dumps(dict(
-        username=username,
-        password=password
-    ))
-    return test_client.post(AUTH_URL,
-                  data=payload,
-                  **JSON_CONTENT_TYPE)
 
 
 def test_registration(test_client):
@@ -105,7 +79,8 @@ def test_get_info(test_client):
         .get('token')
 
     response = test_client.get(user_detail_url(user_id=user_id),
-                               headers={'Authorization': JWT_KEY + token})
+                               headers=get_auth_header(token))
+    assert response.status_code == ResponseCodes.OK
 
     response_data = json.loads(str(response.data, encoding='utf-8'))\
         .get('data')
@@ -127,8 +102,7 @@ def test_invalid_token(test_client):
 
     invalid_token = jwt.encode(payload={}, key='invalid_key')
     response = test_client.get(user_detail_url(user_id=user_id),
-                               headers={'Authorization':
-                                            JWT_KEY + str(invalid_token)})
+                               headers=get_auth_header(invalid_token))
 
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
@@ -148,6 +122,6 @@ def test_expired_token(test_client):
 
     with freeze_time(datetime.now() + timedelta(seconds=320)):
         response = test_client.get(user_detail_url(user_id=user_id),
-                                   headers={'Authorization': JWT_KEY + token})
+                                   headers=get_auth_header(token))
 
         assert response.status_code == ResponseCodes.UNAUTHORIZED_401
