@@ -1,3 +1,6 @@
+import json
+
+
 class ResponseCodes(enumerate):
     OK = 200
     CREATED = 201
@@ -24,3 +27,7 @@ def template_response(status=None,
 
 def detail_template(value):
     return dict(detail=str(value))
+
+
+def get_json(response):
+    return json.loads(str(response.data, encoding='utf-8'))

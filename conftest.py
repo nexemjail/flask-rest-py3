@@ -2,7 +2,7 @@ import pytest
 from common import app as application
 from common.database import db_session as session, decl_base, engine
 from common.models import User
-from events.models import EVENT_STATUSES, EventStatus
+from events.models import EVENT_STATUSES, EventStatus, Event
 
 
 @pytest.yield_fixture(scope='session')
@@ -21,6 +21,7 @@ def clearer(db_session):
     db_session.add_all(statuses)
     db_session.flush()
     yield
+    db_session.query(Event).delete()
     db_session.query(EventStatus).delete()
     db_session.query(User).delete()
 

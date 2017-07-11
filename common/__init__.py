@@ -27,13 +27,15 @@ def create_all(app, db):
 
 
 def register_blueprints(app):
-    from .views import app_bp as users_blueprint
     # import is used to register /auth/ endpoint
     from . import jwt_functions
-    app.register_blueprint(users_blueprint, )
-
+    from .views import app_bp as users_blueprint
+    from .base import app_bp as base_bp
     from events import blueprint as events_blueprint
+
+    app.register_blueprint(users_blueprint, )
     app.register_blueprint(events_blueprint)
+    app.register_blueprint(base_bp)
 
 config_mapping = {
     'CI': 'common.ci_config',

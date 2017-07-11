@@ -11,3 +11,5 @@ TRAP_HTTP_EXCEPTION = True
 JWT_AUTH_URL_RULE = '/auth/'
 
 JWT_KEY = 'JWT'
+
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S %z'

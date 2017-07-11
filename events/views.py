@@ -1,8 +1,9 @@
 from flask.blueprints import Blueprint
-from flask_restful import Api, Resource
+from flask_restful import Api
 
 from common.database import db_session
 from common.utils import ResponseCodes
+from common.base import BaseResource
 from events.serializers import EventSchema, EventCreateSchema
 
 from .models import Event
@@ -15,14 +16,14 @@ api_bp = Blueprint('events', __name__)
 api = Api(api_bp)
 
 
-class EventDetail(Resource):
+class EventDetail(BaseResource):
     @jwt_required()
     def get(self, event_id):
         event = db_session.query(EventDetail).filter(event_id=Event.id).first()
         return EventSchema().dump(event).data, 200
 
 
-class EventList(Resource):
+class EventList(BaseResource):
     @jwt_required()
     def get(self):
         query = db_session.query(Event).filter(
@@ -31,15 +32,16 @@ class EventList(Resource):
         return data, 200
 
 
-class EventCreate(Resource):
+class EventCreate(BaseResource):
     @jwt_required()
     def post(self):
         # create an object instance
-        event, errors = EventCreateSchema().load(request.get_json(force=True))
+        event, errors = EventCreateSchema().loads(str(request.data,
+                                                      encoding='utf-8'))
         if not errors:
             db_session.add(event)
             db_session.flush()
-            return EventSchema().dumps(event, many=False), ResponseCodes.CREATED
+            return EventSchema().dump(event).data, ResponseCodes.CREATED
         return errors, ResponseCodes.BAD_REQUEST_400
 
 

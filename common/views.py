@@ -1,25 +1,15 @@
-from flask_jwt import JWTError
+from flask import Blueprint
+from flask_jwt import jwt_required, current_identity
+from flask_restful import Api
 
-from flask_restful import Resource, Api
-
+from common.base import BaseResource
+from common.database import db_session
 from .models import User
 from .parsers import registration_reqparser
 from .utils import ResponseCodes, template_response
 
-from flask_jwt import jwt_required, current_identity
-from flask import Blueprint, jsonify
-from common.database import db_session
-
 app_bp = Blueprint('users', __name__)
 api = Api(app_bp)
-
-
-class BaseResource(Resource):
-    def dispatch_request(self, *args, **kwargs):
-        try:
-            return super(Resource, self).dispatch_request(*args, **kwargs)
-        except JWTError:
-            raise InvalidJWTException()
 
 
 class Register(BaseResource):
@@ -67,20 +57,3 @@ class UserDetail(BaseResource):
 
 api.add_resource(Register, '/users/user/register/', endpoint='register')
 api.add_resource(UserDetail, '/users/user/<int:user_id>/', endpoint='detail')
-
-
-class InvalidJWTException(Exception):
-    status_code = 401
-
-    def to_dict(self):
-        return {'error': 'Invalid JWT token'}
-
-
-def api_error_handler(e):
-    if isinstance(e, InvalidJWTException):
-        response = jsonify(e.to_dict())
-        response.status_code = e.status_code
-        return response
-    return e
-
-api.handle_error = api_error_handler

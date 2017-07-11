@@ -9,22 +9,23 @@ from flask.helpers import url_for
 from random import randint
 
 from common import app
-from common.utils import ResponseCodes
+from common.utils import ResponseCodes, get_json
 from marshmallow import Schema, fields
 
 from test_utils.helpers import get_auth_header, register_and_login_user, \
     JSON_CONTENT_TYPE, dict_contains_subset
 
-DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+DATETIME_FORMAT = app.config['DATETIME_FORMAT']
 
 
 def get_timezone_aware_time():
     return datetime.now(pytz.utc)
 
+
 with app.test_request_context():
     CREATE_URL = url_for('events.create')
     LIST_URL = url_for('events.list')
-
 
 
 def get_detail_url(event_id):
@@ -36,6 +37,7 @@ class EventPayloadFactory(factory.DictFactory):
     description = factory.Faker('word')
     # TODO: handle C(cancelled) too
     status = fuzzy.FuzzyChoice(['W', 'P'])
+    periodic = False
 
     @factory.lazy_attribute
     def start(self):
@@ -51,11 +53,13 @@ class EventPayloadFactory(factory.DictFactory):
                                    end_dt=self.start + relativedelta(
                                        years=100)).fuzz()
 
+
 class EventPayloadSchema(Schema):
     description = fields.Str()
-    status = fields.Str()
+    status = fields.Str(required=True)
     start = fields.DateTime(format=DATETIME_FORMAT)
     end = fields.DateTime(format=DATETIME_FORMAT)
+    periodic = fields.Boolean(required=True)
 
 
 class NonPeriodicEventFactory(EventPayloadFactory):
@@ -75,19 +79,19 @@ class PeriodicEventPayloadFactory(EventPayloadFactory):
     @factory.lazy_attribute
     def end(self):
         start_datetime = self.start + relativedelta(hours=1) +self.period
-        return fuzzy.FuzzyDateTime(start_datetime).fuzz()\
-            .strftime(DATETIME_FORMAT)
+        return fuzzy.FuzzyDateTime(start_datetime).fuzz()
 
 
 @pytest.mark.usefixtures('clearer')
 def test_create_event(test_client):
     user_payload, token = register_and_login_user(test_client)
     event_payload = EventPayloadFactory()
-    dumped_event_payload = EventPayloadSchema().dumps(event_payload)
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
     response = test_client.post(CREATE_URL,
-                                data=dumped_event_payload.data,
+                                data=json.dumps(dumped_event_payload),
                                 headers=dict(JSON_CONTENT_TYPE,
                                              **get_auth_header(token)))
-    # TODO: provide more asserts!
-    # TODO: compare dates!
+
+    data = get_json(response)
+    assert dict_contains_subset(dumped_event_payload, data)
     assert response.status_code == ResponseCodes.CREATED
