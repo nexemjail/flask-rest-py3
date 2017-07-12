@@ -2,7 +2,7 @@ import json
 import factory
 import pytest
 import pytz
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dateutil.relativedelta import relativedelta
 from factory import fuzzy
 from flask.helpers import url_for
@@ -12,6 +12,7 @@ from common import app
 from common.utils import ResponseCodes, get_json
 from marshmallow import Schema, fields
 
+from events.serializers import PeriodField
 from test_utils.helpers import get_auth_header, register_and_login_user, \
     JSON_CONTENT_TYPE, dict_contains_subset
 
@@ -71,15 +72,27 @@ class PeriodicEventPayloadFactory(EventPayloadFactory):
 
     @factory.lazy_attribute
     def period(self):
-        return relativedelta(day=randint(0, 365),
-                             hour=randint(0,59),
-                             minute=randint(0,59),
-                             second=randint(1,59))
+        return timedelta(days=randint(0, 365),
+                         hours=randint(0,59),
+                         minutes=randint(0,59),
+                         seconds=randint(1,59))
 
     @factory.lazy_attribute
     def end(self):
-        start_datetime = self.start + relativedelta(hours=1) +self.period
-        return fuzzy.FuzzyDateTime(start_datetime).fuzz()
+        start_datetime = self.start + relativedelta(hours=1) + self.period
+        return fuzzy.FuzzyDateTime(
+            start_dt=start_datetime,
+            end_dt=start_datetime + relativedelta(years=100))\
+            .fuzz()
+
+    @factory.lazy_attribute
+    def next_notification(self):
+        return self.start + self.period
+
+
+class PeriodicEventPayloadSchema(EventPayloadSchema):
+    period = PeriodField()
+    next_notification = fields.DateTime(format=DATETIME_FORMAT)
 
 
 @pytest.mark.usefixtures('clearer')
@@ -87,6 +100,23 @@ def test_create_event(test_client):
     user_payload, token = register_and_login_user(test_client)
     event_payload = EventPayloadFactory()
     dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    data = get_json(response)
+    assert dict_contains_subset(dumped_event_payload, data)
+    assert response.status_code == ResponseCodes.CREATED
+
+
+@pytest.mark.usefixtures('clearer')
+def test_create_periodic_event(test_client):
+    user_payload, token = register_and_login_user(test_client)
+    event_payload = PeriodicEventPayloadFactory()
+
+    dumped_event_payload = PeriodicEventPayloadSchema()\
+        .dump(event_payload).data
     response = test_client.post(CREATE_URL,
                                 data=json.dumps(dumped_event_payload),
                                 headers=dict(JSON_CONTENT_TYPE,

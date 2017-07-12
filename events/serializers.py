@@ -1,19 +1,45 @@
+from datetime import timedelta
+
+from dateutil.relativedelta import relativedelta
 from flask.ext.jwt import current_identity
 from flask.ext.marshmallow.schema import Schema
 from marshmallow import fields
 from marshmallow.decorators import post_dump, post_load, pre_load, pre_dump
-from marshmallow.exceptions import ValidationError
-from marshmallow_sqlalchemy import ModelSchema
-from marshmallow_sqlalchemy.schema import ModelSchemaOpts
+from marshmallow.fields import Field
 
 from common import ma, app
 from common.database import db_session
 from common.models import User
+from common.utils import timedelta_to_hms
 from events.models import EventStatus
 from .models import Event
 
 
 DATETIME_FORMAT = app.config['DATETIME_FORMAT']
+
+
+class PeriodField(Field):
+    def _serialize(self, value, attr, obj):
+        if not isinstance(value, timedelta):
+            return None
+        hour, minute, second = timedelta_to_hms(value)
+        return '{d} {h}:{m}:{s}'.format(d=value.days,
+                                        h=hour,
+                                        m=minute,
+                                        s=second)
+
+    def _deserialize(self, value, attr, data):
+        if not isinstance(value, str):
+            return None
+        parts = value.split(' ')
+        days = int(parts[0]) if len(parts) > 1 else 0
+        hms_values = parts[1] if len(parts) > 1 else parts[0]
+
+        hours, minutes, seconds = list(
+            map(int, hms_values.split(':'))
+        )
+        return timedelta(days=days, hours=hours,
+                             minutes=minutes, seconds=seconds)
 
 
 class EventStatusSchema(Schema):
@@ -35,6 +61,7 @@ class EventStatusSchema(Schema):
 class DateTimeEventMixin(Schema):
     start = fields.DateTime(format=DATETIME_FORMAT)
     end = fields.DateTime(format=DATETIME_FORMAT)
+    next_notification = fields.DateTime(format=DATETIME_FORMAT, required=False)
 
 
 class UserSchema(Schema):
@@ -58,8 +85,7 @@ class EventSchema(DateTimeEventMixin):
     description = fields.Str()
 
     periodic = fields.Boolean(required=True, default=False)
-    # TODO: handle duration field
-
+    period = PeriodField()
     next_notification = fields.DateTime(format=DATETIME_FORMAT,
                                         required=False, default=None)
     place = fields.Str()
@@ -86,6 +112,7 @@ class EventCreateSchema(DateTimeEventMixin):
     status = fields.Str(required=True)
 
     periodic = fields.Boolean(required=True, default=False)
+    period = PeriodField()
 
     @post_load
     def make_model(self, data):

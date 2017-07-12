@@ -31,3 +31,13 @@ def detail_template(value):
 
 def get_json(response):
     return json.loads(str(response.data, encoding='utf-8'))
+
+
+def timedelta_to_hms(t):
+    seconds = t.seconds
+    interval_values = []
+    for interval_duration in (3600, 60, 1):
+        interval_length = seconds // interval_duration
+        seconds -= interval_length * interval_duration
+        interval_values.append(interval_length)
+    return interval_values
