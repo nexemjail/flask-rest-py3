@@ -41,6 +41,13 @@ class EventPayloadFactory(factory.DictFactory):
     periodic = False
 
     @factory.lazy_attribute
+    def labels(self):
+        words = randint(0, 7)
+        return list(set(factory.Faker('words').generate(
+            extra_kwargs={'nb': words}))
+        )
+
+    @factory.lazy_attribute
     def start(self):
         start_dt = get_timezone_aware_time()
         return fuzzy.FuzzyDateTime(start_dt=get_timezone_aware_time(),
@@ -61,6 +68,7 @@ class EventPayloadSchema(Schema):
     start = fields.DateTime(format=DATETIME_FORMAT)
     end = fields.DateTime(format=DATETIME_FORMAT)
     periodic = fields.Boolean(required=True)
+    labels = fields.List(fields.Str)
 
 
 class NonPeriodicEventFactory(EventPayloadFactory):

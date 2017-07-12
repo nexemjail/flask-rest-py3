@@ -11,7 +11,7 @@ from common import ma, app
 from common.database import db_session
 from common.models import User
 from common.utils import timedelta_to_hms
-from events.models import EventStatus
+from events.models import EventStatus, Label
 from .models import Event
 
 
@@ -89,35 +89,43 @@ class EventSchema(DateTimeEventMixin):
     next_notification = fields.DateTime(format=DATETIME_FORMAT,
                                         required=False, default=None)
     place = fields.Str()
-    status = fields.Str()
-    labels = fields.Nested(EventLabelSchema, many=True, required=False)
+    status = fields.Method('dump_status')
+    labels = fields.Method('dump_labels', required=False)
     media = fields.Nested(EventMediaSchema, many=True)
 
-    @pre_dump
-    def pre_dump(self, data):
+    def dump_labels(self, data):
+        return [l.name for l in data.labels]
+
+    def dump_status(self, data):
         status = db_session.query(EventStatus).filter(
-            EventStatus.id==data.status_id).first()
+                EventStatus.id==data.status_id).first()
 
         if not status:
             raise Exception('Status not found')
 
-        data.status = status.status.code
-        return data
-
+        return status.status.code
 
 
 class EventCreateSchema(DateTimeEventMixin):
     user = fields.Nested(UserSchema)
     description = fields.Str()
-    status = fields.Str(required=True)
+    status = fields.Method('get_status', required=True)
 
     periodic = fields.Boolean(required=True, default=False)
     period = PeriodField()
+    labels = fields.List(fields.Str)
 
     @post_load
     def make_model(self, data):
         status = data.pop('status')
         event = Event(**data)
+
+        labels_list = data.pop('labels', [])
+        if labels_list:
+            labels = Label.create_all(labels_list).all()
+        else:
+            labels = []
+        event.labels = labels
 
         user_id = db_session.query(User.id)\
             .filter(current_identity.username==User.username)\
@@ -136,7 +144,5 @@ class EventCreateSchema(DateTimeEventMixin):
 
         return event
 
-    @pre_dump()
-    def pre_dump(self, data):
-        data.status = data.status.code
-        return data
+    def get_status(self, obj):
+        return obj.status.status.code

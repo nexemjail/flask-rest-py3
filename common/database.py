@@ -22,10 +22,10 @@ db_session = scoped_session(
 )
 
 decl_base = declarative_base(bind=engine)
+decl_base.query = db_session.query_property()
 
 
 class Base(decl_base):
     __abstract__ = True
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-decl_base.query = db_session.query_property()

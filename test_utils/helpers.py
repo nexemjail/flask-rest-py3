@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from common import app
 from flask import url_for
 
@@ -50,6 +51,15 @@ def register_and_login_user(test_client, user_payload=None):
 
 def dict_contains_subset(child, parent):
     for k, v in child.items():
-        if parent.get(k) != v:
+        parent_value = parent.get(k)
+        if parent_value is None:
+            return False
+
+        if isinstance(v, list):
+            child_list = v
+            if Counter(child_list) != Counter(parent_value):
+                return False
+
+        elif parent_value != v:
             return False
     return True

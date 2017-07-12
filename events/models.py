@@ -44,10 +44,9 @@ class Label(Base):
 
     @classmethod
     def create_non_existing(cls, labels_list):
-
         existing_labels = db_session\
-            .query(Label, Label.name)\
-            .filter(in_(Label.name, labels_list))
+            .query(Label.name)\
+            .filter(Label.name.in_(labels_list))
 
         not_existing_labels = set(labels_list) - set(existing_labels.all())
 
@@ -58,7 +57,7 @@ class Label(Base):
     @classmethod
     def create_all(cls, label_list):
         Label.create_non_existing(label_list)
-        return db_session.query(Label).filter(in_(Label.name, label_list))
+        return db_session.query(Label).filter(Label.name.in_(label_list))
 
 
 class Event(Base):
@@ -66,14 +65,13 @@ class Event(Base):
 
     user_id = Column(Integer, ForeignKey('users.id'))
     description = Column(Text, nullable=True)
-    start = Column(DateTime, nullable=False)
-    end = Column(DateTime, nullable=False)
+    start = Column(DateTime(timezone=True), nullable=False)
+    end = Column(DateTime(timezone=True), nullable=False)
 
     periodic = Column(Boolean, default=False)
-    # TODO: handle duration field
     period = Column(INTERVAL, nullable=True)
 
-    next_notification = Column(DateTime, nullable=True)
+    next_notification = Column(DateTime(timezone=True), nullable=True)
     place = Column(Text, nullable=True)
     status_id = ForeignKey('event_statuses.id', name='status')
     labels = relationship('Label', secondary=LabelsEvents)
