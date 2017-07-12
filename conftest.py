@@ -16,12 +16,13 @@ def db_session():
     session.remove()
 
 
-@pytest.yield_fixture(scope='function', autouse=True)
-def clearer(db_session):
+def setup(db_session):
     statuses = (EventStatus(status=s) for s in EVENT_STATUSES)
     db_session.add_all(statuses)
     db_session.flush()
-    yield
+
+
+def clean(db_session):
     db_session.query(LabelsEvents).delete(synchronize_session=False)
     db_session.query(Label).delete(synchronize_session=False)
     db_session.query(Event).delete(synchronize_session=False)
@@ -30,6 +31,12 @@ def clearer(db_session):
 
 
 @pytest.yield_fixture(scope='function')
-def test_client(db_session):
-    with db_session.begin(subtransactions=True) as t:
-        yield application.test_client()
+def transaction(db_session):
+    setup(db_session)
+    yield db_session.begin()
+    db_session.rollback()
+    clean(db_session)
+
+@pytest.yield_fixture(scope='function')
+def test_client(transaction):
+    yield application.test_client()

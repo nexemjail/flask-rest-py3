@@ -103,7 +103,6 @@ class PeriodicEventPayloadSchema(EventPayloadSchema):
     next_notification = fields.DateTime(format=DATETIME_FORMAT)
 
 
-@pytest.mark.usefixtures('clearer')
 def test_create_event(test_client):
     user_payload, token = register_and_login_user(test_client)
     event_payload = EventPayloadFactory()
@@ -118,7 +117,6 @@ def test_create_event(test_client):
     assert response.status_code == ResponseCodes.CREATED
 
 
-@pytest.mark.usefixtures('clearer')
 def test_create_periodic_event(test_client):
     user_payload, token = register_and_login_user(test_client)
     event_payload = PeriodicEventPayloadFactory()
