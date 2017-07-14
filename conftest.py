@@ -1,6 +1,6 @@
 import pytest
 from common import app as application
-from common.database import db_session as session, decl_base
+from common.database import db_session as session, decl_base, sessionmaker
 from common.models import User
 from events.models import EVENT_STATUSES, EventStatus, Event, Label, \
     LabelsEvents
@@ -11,7 +11,7 @@ def db_session():
     decl_base.metadata.create_all()
 
     yield session
-
+    sessionmaker.close_all()
     decl_base.metadata.drop_all()
     session.remove()
 
