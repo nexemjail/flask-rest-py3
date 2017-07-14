@@ -19,9 +19,16 @@ api = Api(api_bp)
 class EventDetail(BaseResource):
     @jwt_required()
     def get(self, event_id):
-        event = db_session.query(EventDetail).filter(event_id=Event.id).first()
+        event = db_session.query(Event).filter(Event.id == event_id).first()
+        if not event or event.user_id != current_identity.id:
+            return {'error': 'Not found'}, 404
         return EventSchema().dump(event).data, 200
 
+
+class EventUpdate(BaseResource):
+    @jwt_required()
+    def patch(self):
+        pass
 
 class EventList(BaseResource):
     @jwt_required()
@@ -40,12 +47,14 @@ class EventCreate(BaseResource):
                                                       encoding='utf-8'))
         if not errors:
             db_session.add(event)
-            db_session.flush()
+            db_session.commit()
             return EventSchema().dump(event).data, ResponseCodes.CREATED
         return errors, ResponseCodes.BAD_REQUEST_400
 
 
 api.add_resource(EventDetail, '/events/event/<int:event_id>',
                  endpoint='detail')
+api.add_resource(EventUpdate, '/events/event/<int:event_id>',
+                 endpoint='update')
 api.add_resource(EventCreate, '/events/event/', endpoint='create')
 api.add_resource(EventList, '/events/event/list/', endpoint='list')

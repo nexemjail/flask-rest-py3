@@ -16,9 +16,10 @@ engine = create_engine(app.config.get('SQLALCHEMY_DATABASE_URI'),
 
 db_session = scoped_session(
     sessionmaker(
-        autocommit=True,
+        autocommit=False,
         autoflush=False,
-        bind=engine),
+        bind=engine,
+        expire_on_commit=False)
 )
 
 decl_base = declarative_base(bind=engine)

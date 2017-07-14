@@ -81,6 +81,7 @@ class EventMediaSchema(Schema):
 
 
 class EventSchema(DateTimeEventMixin):
+    id = fields.Integer()
     user = fields.Nested(UserSchema)
     description = fields.Str()
 
@@ -97,13 +98,7 @@ class EventSchema(DateTimeEventMixin):
         return [l.name for l in data.labels]
 
     def dump_status(self, data):
-        status = db_session.query(EventStatus).filter(
-                EventStatus.id==data.status_id).first()
-
-        if not status:
-            raise Exception('Status not found')
-
-        return status.status.code
+        return data.status.status.code
 
 
 class EventCreateSchema(DateTimeEventMixin):
@@ -128,7 +123,8 @@ class EventCreateSchema(DateTimeEventMixin):
         event.labels = labels
 
         user_id = db_session.query(User.id)\
-            .filter(current_identity.username==User.username)\
+            .filter(current_identity.username==User.username,
+                    current_identity.email==User.email)\
             .first()
         if not user_id:
             raise Exception('no user found for JWT')

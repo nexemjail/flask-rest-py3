@@ -73,7 +73,8 @@ class Event(Base):
 
     next_notification = Column(DateTime(timezone=True), nullable=True)
     place = Column(Text, nullable=True)
-    status_id = ForeignKey('event_statuses.id', name='status')
+    status_id = Column(Integer, ForeignKey(EventStatus.id))
+    status = relationship('EventStatus')
     labels = relationship('Label', secondary=LabelsEvents)
     media = relationship('EventMedia')
 

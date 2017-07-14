@@ -19,7 +19,7 @@ def db_session():
 def setup(db_session):
     statuses = (EventStatus(status=s) for s in EVENT_STATUSES)
     db_session.add_all(statuses)
-    db_session.flush()
+    db_session.commit()
 
 
 def clean(db_session):
@@ -33,10 +33,10 @@ def clean(db_session):
 @pytest.yield_fixture(scope='function')
 def transaction(db_session):
     setup(db_session)
-    yield db_session.begin()
+    yield db_session.begin_nested()
     db_session.rollback()
     clean(db_session)
 
 @pytest.yield_fixture(scope='function')
-def test_client(transaction):
+def test_client():
     yield application.test_client()

@@ -103,7 +103,7 @@ class PeriodicEventPayloadSchema(EventPayloadSchema):
     next_notification = fields.DateTime(format=DATETIME_FORMAT)
 
 
-def test_create_event(test_client):
+def test_create_event(test_client, transaction):
     user_payload, token = register_and_login_user(test_client)
     event_payload = EventPayloadFactory()
     dumped_event_payload = EventPayloadSchema().dump(event_payload).data
@@ -117,7 +117,7 @@ def test_create_event(test_client):
     assert response.status_code == ResponseCodes.CREATED
 
 
-def test_create_periodic_event(test_client):
+def test_create_periodic_event(test_client, transaction):
     user_payload, token = register_and_login_user(test_client)
     event_payload = PeriodicEventPayloadFactory()
 
@@ -131,3 +131,26 @@ def test_create_periodic_event(test_client):
     data = get_json(response)
     assert dict_contains_subset(dumped_event_payload, data)
     assert response.status_code == ResponseCodes.CREATED
+
+
+def test_event_detail(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+    event_payload = PeriodicEventPayloadFactory()
+
+    dumped_event_payload = PeriodicEventPayloadSchema() \
+        .dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    data = get_json(response)
+    assert response.status_code == ResponseCodes.CREATED
+
+    response = test_client.get(get_detail_url(data['id']),
+                               headers=dict(JSON_CONTENT_TYPE,
+                                            **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.OK
+    data = get_json(response)
+    assert dict_contains_subset(dumped_event_payload, data)

@@ -31,7 +31,7 @@ class Register(BaseResource):
 
         user = User(**data)
         db_session.add(user)
-        db_session.flush()
+        db_session.commit()
 
         return template_response(status='Success',
                                  code=ResponseCodes.CREATED,

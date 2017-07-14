@@ -22,7 +22,7 @@ def user_detail_url(user_id):
         return url_for(endpoint='users.detail', user_id=user_id)
 
 
-def test_registration(test_client):
+def test_registration(test_client, transaction):
     user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
@@ -30,7 +30,7 @@ def test_registration(test_client):
     assert response.status_code == ResponseCodes.CREATED
 
 
-def test_user_already_exists(test_client):
+def test_user_already_exists(test_client, transaction):
     user_payload = fake_user_payload()
     payload = json.dumps(user_payload)
     test_client.post(REGISTER_URL,
@@ -42,7 +42,7 @@ def test_user_already_exists(test_client):
     assert response.status_code == ResponseCodes.BAD_REQUEST_400
 
 
-def test_login_successful(test_client):
+def test_login_successful(test_client, transaction):
     user_payload = fake_user_payload()
     payload = json.dumps(user_payload)
     test_client.post(REGISTER_URL, data=payload, **JSON_CONTENT_TYPE)
@@ -53,7 +53,7 @@ def test_login_successful(test_client):
     assert 'token' in json.loads(str(response.data, encoding='utf8'))
 
 
-def test_login_unsuccessful(test_client):
+def test_login_unsuccessful(test_client, transaction):
     user_payload = fake_user_payload()
     payload = user_payload.copy()
     payload['username'] = 'seed'
@@ -64,7 +64,7 @@ def test_login_unsuccessful(test_client):
                                  password=user_payload['password'])
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
-def test_get_info(test_client):
+def test_get_info(test_client, transaction):
     user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
@@ -87,7 +87,7 @@ def test_get_info(test_client):
 
     assert response_data['username'] == user_payload['username']
 
-def test_invalid_token(test_client):
+def test_invalid_token(test_client, transaction):
     user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
@@ -106,7 +106,7 @@ def test_invalid_token(test_client):
 
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
-def test_expired_token(test_client):
+def test_expired_token(test_client, transaction):
     user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
