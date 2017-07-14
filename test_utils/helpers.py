@@ -40,7 +40,7 @@ def register_and_login_user(test_client, user_payload=None, with_id=False):
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
-    user_id = get_json(response)['data']['id']
+    user_id = get_json(response, inner_data=True)['id']
     assert response.status_code == ResponseCodes.CREATED
     response = get_auth_response(test_client=test_client,
                                  username=user_payload['username'],

@@ -72,7 +72,7 @@ def test_get_info(test_client, transaction):
                                headers=get_auth_header(token))
     assert response.status_code == ResponseCodes.OK
 
-    response_data = get_json(response).get('data')
+    response_data = get_json(response, inner_data=True)
 
     assert response_data['username'] == user_payload['username']
 

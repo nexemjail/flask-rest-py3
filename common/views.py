@@ -26,8 +26,7 @@ class Register(BaseResource):
         if users_found > 0:
             return template_response(code=ResponseCodes.BAD_REQUEST_400,
                                      status='Error',
-                                     message='User already exists'),\
-                   ResponseCodes.BAD_REQUEST_400
+                                     message='User already exists')
 
         user = User(**data)
         db_session.add(user)
@@ -36,24 +35,20 @@ class Register(BaseResource):
         return template_response(status='Success',
                                  code=ResponseCodes.CREATED,
                                  message='User created',
-                                 data=user.to_json()),\
-            ResponseCodes.CREATED
-
+                                 data=user.to_json())
 
 class UserDetail(BaseResource):
     @jwt_required()
     def get(self, user_id):
         user = User.query.filter_by(id=user_id).first()
+
         if not user or current_identity != user:
-            return template_response(status='Error',
-                                     code=ResponseCodes.NOT_FOUND_404,
-                                     message='Not found'), \
-                ResponseCodes.NOT_FOUND_404
+            return self._not_found()
 
         return template_response(status='OK',
                                  code=ResponseCodes.OK,
-                                 data=user.to_json()),\
-            ResponseCodes.OK
+                                 data=user.to_json())
+
 
 api.add_resource(Register, '/users/user/register/', endpoint='register')
 api.add_resource(UserDetail, '/users/user/<int:user_id>/', endpoint='detail')
