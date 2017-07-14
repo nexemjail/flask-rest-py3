@@ -2,7 +2,7 @@ from flask.blueprints import Blueprint
 from flask_restful import Api
 
 from common.database import db_session
-from common.utils import ResponseCodes, template_response
+from common.utils import ResponseCodes, template_response, bytes_to_str
 from common.base import BaseResource
 from events.serializers import EventSchema, EventCreateSchema
 
@@ -50,8 +50,7 @@ class EventCreate(BaseResource):
     @jwt_required()
     def post(self):
         # create an object instance
-        event, errors = EventCreateSchema().loads(str(request.data,
-                                                      encoding='utf-8'))
+        event, errors = EventCreateSchema().loads(bytes_to_str(request.data))
         if not errors:
             db_session.add(event)
             db_session.commit()

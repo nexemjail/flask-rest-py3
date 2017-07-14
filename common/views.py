@@ -1,11 +1,12 @@
-from flask import Blueprint
+from flask import Blueprint, request
 from flask_jwt import jwt_required, current_identity
 from flask_restful import Api
 
 from common.base import BaseResource
 from common.database import db_session
+from common.serializers import UserRegisterSchema
+from common.utils import bytes_to_str
 from .models import User
-from .parsers import registration_reqparser
 from .utils import ResponseCodes, template_response
 
 app_bp = Blueprint('users', __name__)
@@ -13,12 +14,10 @@ api = Api(app_bp)
 
 
 class Register(BaseResource):
-    def __init__(self):
-        self.reqparse = registration_reqparser()
-        super(Register, self).__init__()
-
     def post(self):
-        data = self.reqparse.parse_args()
+        data, errors = UserRegisterSchema().loads(bytes_to_str(request.data))
+        if errors:
+            return self._bad_request(errors)
 
         users_found = db_session.query(User)\
             .filter(User.username==data['username'])\
@@ -36,6 +35,13 @@ class Register(BaseResource):
                                  code=ResponseCodes.CREATED,
                                  message='User created',
                                  data=user.to_json())
+
+    def _bad_request(self, errors):
+        return template_response(
+            status='Errored',
+            code=ResponseCodes.BAD_REQUEST_400,
+            data=errors
+        )
 
 class UserDetail(BaseResource):
     @jwt_required()

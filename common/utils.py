@@ -42,3 +42,7 @@ def timedelta_to_hms(t):
         seconds -= interval_length * interval_duration
         interval_values.append(interval_length)
     return interval_values
+
+
+def bytes_to_str(bytestring):
+    return str(bytestring, encoding='utf-8')
