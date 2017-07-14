@@ -4,7 +4,7 @@ import jwt
 from flask import url_for
 from common import app
 
-from common.utils import ResponseCodes
+from common.utils import ResponseCodes, get_json
 
 from datetime import datetime, timedelta
 from freezegun import freeze_time
@@ -50,7 +50,7 @@ def test_login_successful(test_client, transaction):
                                  username=user_payload['username'],
                                  password=user_payload['password'])
     assert response.status_code == ResponseCodes.OK
-    assert 'token' in json.loads(str(response.data, encoding='utf8'))
+    assert 'token' in get_json(response)
 
 
 def test_login_unsuccessful(test_client, transaction):
@@ -69,21 +69,19 @@ def test_get_info(test_client, transaction):
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
-    user = json.loads(str(response.data, encoding='utf-8')).get('data')
+    user = get_json(response).get('data')
     user_id = user.get('id')
 
     response = get_auth_response(test_client,
                                  username=user_payload['username'],
                                  password=user_payload['password'])
-    token = json.loads(str(response.data, encoding='utf-8'))\
-        .get('token')
+    token = get_json(response).get('token')
 
     response = test_client.get(user_detail_url(user_id=user_id),
                                headers=get_auth_header(token))
     assert response.status_code == ResponseCodes.OK
 
-    response_data = json.loads(str(response.data, encoding='utf-8'))\
-        .get('data')
+    response_data = get_json(response).get('data')
 
     assert response_data['username'] == user_payload['username']
 
@@ -92,7 +90,7 @@ def test_invalid_token(test_client, transaction):
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
-    user = json.loads(str(response.data, encoding='utf-8')).get('data')
+    user = get_json(response).get('data')
     user_id = user.get('id')
 
     response = get_auth_response(test_client,
@@ -111,14 +109,13 @@ def test_expired_token(test_client, transaction):
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
-    user = json.loads(str(response.data, encoding='utf-8')).get('data')
+    user = get_json(response).get('data')
     user_id = user.get('id')
 
     response = get_auth_response(test_client,
                                  username=user_payload['username'],
                                  password=user_payload['password'])
-    token = json.loads(str(response.data, encoding='utf-8'))\
-        .get('token')
+    token = get_json(response).get('token')
 
     with freeze_time(datetime.now() + timedelta(seconds=320)):
         response = test_client.get(user_detail_url(user_id=user_id),
