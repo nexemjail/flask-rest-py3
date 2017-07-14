@@ -112,7 +112,7 @@ def test_create_event(test_client, transaction):
                                 headers=dict(JSON_CONTENT_TYPE,
                                              **get_auth_header(token)))
 
-    data = get_json(response)
+    data = get_json(response, inner_data=True)
     assert dict_contains_subset(dumped_event_payload, data)
     assert response.status_code == ResponseCodes.CREATED
 
@@ -128,7 +128,7 @@ def test_create_periodic_event(test_client, transaction):
                                 headers=dict(JSON_CONTENT_TYPE,
                                              **get_auth_header(token)))
 
-    data = get_json(response)
+    data = get_json(response, inner_data=True)
     assert dict_contains_subset(dumped_event_payload, data)
     assert response.status_code == ResponseCodes.CREATED
 
@@ -144,7 +144,7 @@ def test_event_detail(test_client, transaction):
                                 headers=dict(JSON_CONTENT_TYPE,
                                              **get_auth_header(token)))
 
-    data = get_json(response)
+    data = get_json(response, inner_data=True)
     assert response.status_code == ResponseCodes.CREATED
 
     response = test_client.get(get_detail_url(data['id']),
@@ -152,5 +152,5 @@ def test_event_detail(test_client, transaction):
                                             **get_auth_header(token)))
 
     assert response.status_code == ResponseCodes.OK
-    data = get_json(response)
+    data = get_json(response, inner_data=True)
     assert dict_contains_subset(dumped_event_payload, data)

@@ -2,7 +2,7 @@ from flask.blueprints import Blueprint
 from flask_restful import Api
 
 from common.database import db_session
-from common.utils import ResponseCodes
+from common.utils import ResponseCodes, template_response
 from common.base import BaseResource
 from events.serializers import EventSchema, EventCreateSchema
 
@@ -21,8 +21,12 @@ class EventDetail(BaseResource):
     def get(self, event_id):
         event = db_session.query(Event).filter(Event.id == event_id).first()
         if not event or event.user_id != current_identity.id:
-            return {'error': 'Not found'}, 404
-        return EventSchema().dump(event).data, 200
+            return self._not_found()
+        return template_response(
+            status='OK',
+            code=ResponseCodes.OK,
+            data=EventSchema().dump(event).data
+        )
 
 
 class EventUpdate(BaseResource):
@@ -35,8 +39,11 @@ class EventList(BaseResource):
     def get(self):
         query = db_session.query(Event).filter(
             Event.user_id == current_identity.id).all()
-        data = EventSchema().dump(query,many=True).data
-        return data, 200
+        return template_response(
+            status='OK',
+            code=ResponseCodes.OK,
+            data=EventSchema().dump(query,many=True).data
+        )
 
 
 class EventCreate(BaseResource):
@@ -48,8 +55,21 @@ class EventCreate(BaseResource):
         if not errors:
             db_session.add(event)
             db_session.commit()
-            return EventSchema().dump(event).data, ResponseCodes.CREATED
-        return errors, ResponseCodes.BAD_REQUEST_400
+            return \
+                template_response(
+                    status='OK',
+                    message='Created',
+                    data=EventSchema().dump(event).data,
+                    code=ResponseCodes.CREATED,
+                )
+        return self._bad_request(errors)
+
+    def _bad_request(self, errors):
+        return template_response(
+            status='Errored',
+            code=ResponseCodes.BAD_REQUEST_400,
+            data=errors
+        )
 
 
 api.add_resource(EventDetail, '/events/event/<int:event_id>',

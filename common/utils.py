@@ -22,15 +22,16 @@ def template_response(status=None,
         'code': code,
         'message': message,
         'data': data
-    }
+    }, code
 
 
 def detail_template(value):
     return dict(detail=str(value))
 
 
-def get_json(response):
-    return json.loads(str(response.data, encoding='utf-8'))
+def get_json(response, inner_data=False):
+    parsed_json = json.loads(str(response.data, encoding='utf-8'))
+    return parsed_json.get('data') if inner_data else parsed_json
 
 
 def timedelta_to_hms(t):
