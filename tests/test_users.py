@@ -11,7 +11,7 @@ from freezegun import freeze_time
 
 from test_utils.factories import fake_user_payload
 from test_utils.helpers import REGISTER_URL, JSON_CONTENT_TYPE, \
-    get_auth_response, get_auth_header
+    get_auth_response, get_auth_header, register_and_login_user
 
 JWT_KEY = app.config['JWT_KEY']
 AUTH_URL = app.config['JWT_AUTH_URL_RULE']
@@ -65,17 +65,8 @@ def test_login_unsuccessful(test_client, transaction):
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
 def test_get_info(test_client, transaction):
-    user_payload = fake_user_payload()
-    response = test_client.post(REGISTER_URL,
-                      data=json.dumps(user_payload),
-                      **JSON_CONTENT_TYPE)
-    user = get_json(response).get('data')
-    user_id = user.get('id')
-
-    response = get_auth_response(test_client,
-                                 username=user_payload['username'],
-                                 password=user_payload['password'])
-    token = get_json(response).get('token')
+    user_payload, token, user_id = register_and_login_user(test_client,
+                                                       with_id=True)
 
     response = test_client.get(user_detail_url(user_id=user_id),
                                headers=get_auth_header(token))
@@ -86,17 +77,8 @@ def test_get_info(test_client, transaction):
     assert response_data['username'] == user_payload['username']
 
 def test_invalid_token(test_client, transaction):
-    user_payload = fake_user_payload()
-    response = test_client.post(REGISTER_URL,
-                      data=json.dumps(user_payload),
-                      **JSON_CONTENT_TYPE)
-    user = get_json(response).get('data')
-    user_id = user.get('id')
-
-    response = get_auth_response(test_client,
-                                 username=user_payload['username'],
-                                 password=user_payload['password'])
-    assert response.status_code == 200
+    user_payload, token, user_id = register_and_login_user(test_client,
+                                                           with_id=True)
 
     invalid_token = jwt.encode(payload={}, key='invalid_key')
     response = test_client.get(user_detail_url(user_id=user_id),
@@ -105,17 +87,8 @@ def test_invalid_token(test_client, transaction):
     assert response.status_code == ResponseCodes.UNAUTHORIZED_401
 
 def test_expired_token(test_client, transaction):
-    user_payload = fake_user_payload()
-    response = test_client.post(REGISTER_URL,
-                      data=json.dumps(user_payload),
-                      **JSON_CONTENT_TYPE)
-    user = get_json(response).get('data')
-    user_id = user.get('id')
-
-    response = get_auth_response(test_client,
-                                 username=user_payload['username'],
-                                 password=user_payload['password'])
-    token = get_json(response).get('token')
+    user_payload, token, user_id = register_and_login_user(test_client,
+                                                           with_id=True)
 
     with freeze_time(datetime.now() + timedelta(seconds=320)):
         response = test_client.get(user_detail_url(user_id=user_id),

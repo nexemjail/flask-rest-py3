@@ -3,7 +3,7 @@ from collections import Counter
 from common import app
 from flask import url_for
 
-from common.utils import ResponseCodes
+from common.utils import ResponseCodes, get_json
 from test_utils.factories import fake_user_payload
 
 JWT_KEY = app.config['JWT_KEY']
@@ -34,19 +34,19 @@ def get_auth_header(token):
                                                     token=str(token))}
 
 
-def register_and_login_user(test_client, user_payload=None):
+def register_and_login_user(test_client, user_payload=None, with_id=False):
     if user_payload is None:
         user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
                       data=json.dumps(user_payload),
                       **JSON_CONTENT_TYPE)
+    user_id = get_json(response)['data']['id']
     assert response.status_code == ResponseCodes.CREATED
     response = get_auth_response(test_client=test_client,
                                  username=user_payload['username'],
                                  password=user_payload['password'])
-    token = json.loads(str(response.data, encoding='utf-8'))\
-        .get('token')
-    return user_payload, token
+    token = get_json(response).get('token')
+    return (user_payload, token, user_id) if with_id else (user_payload, token)
 
 
 def dict_contains_subset(child, parent):
