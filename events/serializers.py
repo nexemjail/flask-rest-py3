@@ -1,9 +1,11 @@
 from datetime import timedelta
 
+from dateutil.relativedelta import relativedelta
 from flask_jwt import current_identity
 from flask_marshmallow import Schema
 from marshmallow import fields
-from marshmallow.decorators import post_load, pre_dump
+from marshmallow.decorators import post_load, pre_dump, validates_schema
+from marshmallow.exceptions import ValidationError
 from marshmallow.fields import Field
 
 from common import app
@@ -109,7 +111,6 @@ class EventCreateSchema(DateTimeEventMixin):
     period = PeriodField()
     labels = fields.List(fields.Str)
 
-    @post_load
     def make_model(self, data):
         status = data.pop('status')
         event = Event(**data)
@@ -141,3 +142,37 @@ class EventCreateSchema(DateTimeEventMixin):
 
     def get_status(self, obj):
         return obj.status.status.code
+
+    @validates_schema
+    def validate(self, data, many=None, partial=None):
+        if data.get('periodic') is False and data.get('period') is not None:
+            raise ValidationError('Either both of period and periodic '
+                                  'should be specified or none of them',
+                                  field_names=['period', 'periodic'])
+        if data.get('next_notification') is None:
+            data['next_notification'] = data['start'] - \
+                                        relativedelta(minutes=5)
+
+        if data.get('end'):
+            start, end = data['start'], data['end']
+
+            if start > end:
+                raise ValidationError('Invalid event borders',
+                                      field_names=['start', 'end'])
+
+            event_borders = db_session.query(Event.start, Event.end)\
+                .filter(
+                    Event.user_id==current_identity.id,
+                    Event.end.isnot(None))\
+                .all()
+            for event_start, event_end in event_borders:
+                if max(event_start, start) <= min(event_end, end):
+                    raise ValidationError('Event is overlapping with others')
+
+
+# TODO: finish update schema!
+class EventUpdateSchema(EventCreateSchema):
+    id = fields.Integer(required=True)
+
+    def load_object(self, data):
+        return db_session.query(Event).filter(Event.id==data['id']).first()

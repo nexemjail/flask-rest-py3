@@ -69,6 +69,8 @@ class EventPayloadSchema(Schema):
     end = fields.DateTime(format=DATETIME_FORMAT)
     periodic = fields.Boolean(required=True)
     labels = fields.List(fields.Str)
+    period = PeriodField()
+    next_notification = fields.DateTime(format=DATETIME_FORMAT)
 
 
 class NonPeriodicEventFactory(EventPayloadFactory):
@@ -98,14 +100,12 @@ class PeriodicEventPayloadFactory(EventPayloadFactory):
         return self.start + self.period
 
 
-class PeriodicEventPayloadSchema(EventPayloadSchema):
-    period = PeriodField()
-    next_notification = fields.DateTime(format=DATETIME_FORMAT)
-
-
-def test_create_event(test_client, transaction):
-    user_payload, token = register_and_login_user(test_client)
-    event_payload = EventPayloadFactory()
+def create_event(test_client, token,
+                 event_payload=None,
+                 event_payload_factory=PeriodicEventPayloadFactory,
+                 return_dumped_payload=True):
+    if event_payload is None:
+        event_payload = event_payload_factory()
     dumped_event_payload = EventPayloadSchema().dump(event_payload).data
     response = test_client.post(CREATE_URL,
                                 data=json.dumps(dumped_event_payload),
@@ -113,39 +113,33 @@ def test_create_event(test_client, transaction):
                                              **get_auth_header(token)))
 
     data = get_json(response, inner_data=True)
-    assert dict_contains_subset(dumped_event_payload, data)
     assert response.status_code == ResponseCodes.CREATED
+    return (dumped_event_payload, data) \
+        if return_dumped_payload else (event_payload, data)
+
+
+def test_create_event(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+    dumped_event_payload, data = create_event(
+        test_client, token, event_payload_factory=EventPayloadFactory)
+
+    assert dict_contains_subset(dumped_event_payload, data)
 
 
 def test_create_periodic_event(test_client, transaction):
     user_payload, token = register_and_login_user(test_client)
-    event_payload = PeriodicEventPayloadFactory()
 
-    dumped_event_payload = PeriodicEventPayloadSchema()\
-        .dump(event_payload).data
-    response = test_client.post(CREATE_URL,
-                                data=json.dumps(dumped_event_payload),
-                                headers=dict(JSON_CONTENT_TYPE,
-                                             **get_auth_header(token)))
+    dumped_event_payload, data = create_event(
+        test_client, token, event_payload_factory=PeriodicEventPayloadFactory)
 
-    data = get_json(response, inner_data=True)
     assert dict_contains_subset(dumped_event_payload, data)
-    assert response.status_code == ResponseCodes.CREATED
 
 
 def test_event_detail(test_client, transaction):
     user_payload, token = register_and_login_user(test_client)
-    event_payload = PeriodicEventPayloadFactory()
 
-    dumped_event_payload = PeriodicEventPayloadSchema() \
-        .dump(event_payload).data
-    response = test_client.post(CREATE_URL,
-                                data=json.dumps(dumped_event_payload),
-                                headers=dict(JSON_CONTENT_TYPE,
-                                             **get_auth_header(token)))
-
-    data = get_json(response, inner_data=True)
-    assert response.status_code == ResponseCodes.CREATED
+    dumped_event_payload, data = create_event(
+        test_client, token, event_payload_factory=PeriodicEventPayloadFactory)
 
     response = test_client.get(get_detail_url(data['id']),
                                headers=dict(JSON_CONTENT_TYPE,
@@ -154,3 +148,21 @@ def test_event_detail(test_client, transaction):
     assert response.status_code == ResponseCodes.OK
     data = get_json(response, inner_data=True)
     assert dict_contains_subset(dumped_event_payload, data)
+
+
+def test_invalid_start_end(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    event_payload['end'] = event_payload['start'] - relativedelta(minutes=5)
+
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.BAD_REQUEST_400
+    data = get_json(response, inner_data=True)
+    assert 'start' in data
+    assert 'end' in data

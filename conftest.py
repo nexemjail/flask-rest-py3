@@ -37,6 +37,7 @@ def transaction(db_session):
     db_session.rollback()
     clean(db_session)
 
+
 @pytest.yield_fixture(scope='function')
 def test_client():
     yield application.test_client()

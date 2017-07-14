@@ -4,7 +4,7 @@ from flask_restful import Api
 from common.database import db_session
 from common.utils import ResponseCodes, template_response, bytes_to_str
 from common.base import BaseResource
-from events.serializers import EventSchema, EventCreateSchema
+from events.serializers import EventSchema, EventCreateSchema, EventUpdateSchema
 
 from .models import Event
 
@@ -16,7 +16,17 @@ api_bp = Blueprint('events', __name__)
 api = Api(api_bp)
 
 
-class EventDetail(BaseResource):
+class EventBase(BaseResource):
+    def _bad_request(self, errors):
+        return template_response(
+            status='Error',
+            code=ResponseCodes.BAD_REQUEST_400,
+            data=errors
+        )
+
+
+
+class EventDetail(EventBase):
     @jwt_required()
     def get(self, event_id):
         event = db_session.query(Event).filter(Event.id == event_id).first()
@@ -29,12 +39,23 @@ class EventDetail(BaseResource):
         )
 
 
-class EventUpdate(BaseResource):
+class EventUpdate(EventBase):
     @jwt_required()
     def patch(self):
-        pass
+        schema = EventUpdateSchema(partial=True)
+        data, errors = schema.loads(bytes_to_str(request.data))
+        if errors:
+            return self._bad_request(errors)
 
-class EventList(BaseResource):
+        #TODO: handle logic here!
+
+        db_session.query(Event).filter(data.id)
+
+        if errors:
+            return self._bad_request(errors)
+
+
+class EventList(EventBase):
     @jwt_required()
     def get(self):
         query = db_session.query(Event).filter(
@@ -46,28 +67,25 @@ class EventList(BaseResource):
         )
 
 
-class EventCreate(BaseResource):
+class EventCreate(EventBase):
     @jwt_required()
     def post(self):
         # create an object instance
-        event, errors = EventCreateSchema().loads(bytes_to_str(request.data))
-        if not errors:
-            db_session.add(event)
-            db_session.commit()
-            return \
-                template_response(
-                    status='OK',
-                    message='Created',
-                    data=EventSchema().dump(event).data,
-                    code=ResponseCodes.CREATED,
-                )
-        return self._bad_request(errors)
+        schema = EventCreateSchema()
+        event_data, errors = schema.loads(bytes_to_str(request.data))
 
-    def _bad_request(self, errors):
+        if errors:
+            return self._bad_request(errors)
+
+        event = schema.make_model(event_data)
+        db_session.add(event)
+        db_session.commit()
+
         return template_response(
-            status='Errored',
-            code=ResponseCodes.BAD_REQUEST_400,
-            data=errors
+                status='OK',
+                message='Created',
+                data=EventSchema().dump(event).data,
+                code=ResponseCodes.CREATED
         )
 
 
