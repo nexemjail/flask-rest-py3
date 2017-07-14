@@ -1,13 +1,12 @@
 from datetime import timedelta
 
-from dateutil.relativedelta import relativedelta
-from flask.ext.jwt import current_identity
-from flask.ext.marshmallow.schema import Schema
+from flask_jwt import current_identity
+from flask_marshmallow import Schema
 from marshmallow import fields
-from marshmallow.decorators import post_dump, post_load, pre_load, pre_dump
+from marshmallow.decorators import post_load, pre_dump
 from marshmallow.fields import Field
 
-from common import ma, app
+from common import app
 from common.database import db_session
 from common.models import User
 from common.utils import timedelta_to_hms
