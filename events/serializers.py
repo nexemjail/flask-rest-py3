@@ -39,8 +39,10 @@ class PeriodField(Field):
         hours, minutes, seconds = list(
             map(int, hms_values.split(':'))
         )
-        return timedelta(days=days, hours=hours,
-                             minutes=minutes, seconds=seconds)
+        return timedelta(days=days,
+                         hours=hours,
+                         minutes=minutes,
+                         seconds=seconds)
 
 
 class EventStatusSchema(Schema):
@@ -49,7 +51,7 @@ class EventStatusSchema(Schema):
     @post_load
     def make_model(self, data):
         return db_session.query(EventStatus)\
-            .filter(EventStatus.status==data['status'])\
+            .filter(EventStatus.status == data['status'])\
             .limit(1)\
             .first()
 
@@ -78,7 +80,6 @@ class EventLabelSchema(Schema):
 
 class EventMediaSchema(Schema):
     pass
-
 
 
 class EventSchema(DateTimeEventMixin):
@@ -123,15 +124,15 @@ class EventCreateSchema(DateTimeEventMixin):
         event.labels = labels
 
         user_id = db_session.query(User.id)\
-            .filter(current_identity.username==User.username,
-                    current_identity.email==User.email)\
+            .filter(current_identity.username == User.username,
+                    current_identity.email == User.email)\
             .first()
         if not user_id:
             raise Exception('no user found for JWT')
         event.user_id = user_id[0]
 
         event_status_id = db_session.query(EventStatus.id)\
-            .filter(EventStatus.status==status)\
+            .filter(EventStatus.status == status)\
             .first()
         if not event_status_id:
             raise Exception('No status found for key {}'.format(status))
@@ -162,7 +163,7 @@ class EventCreateSchema(DateTimeEventMixin):
 
             event_borders = db_session.query(Event.start, Event.end)\
                 .filter(
-                    Event.user_id==current_identity.id,
+                    Event.user_id == current_identity.id,
                     Event.end.isnot(None))\
                 .all()
             for event_start, event_end in event_borders:
@@ -175,4 +176,4 @@ class EventUpdateSchema(EventCreateSchema):
     id = fields.Integer(required=True)
 
     def load_object(self, data):
-        return db_session.query(Event).filter(Event.id==data['id']).first()
+        return db_session.query(Event).filter(Event.id == data['id']).first()

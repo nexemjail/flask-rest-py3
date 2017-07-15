@@ -4,7 +4,9 @@ from flask_restful import Api
 from common.database import db_session
 from common.utils import ResponseCodes, template_response, bytes_to_str
 from common.base import BaseResource
-from events.serializers import EventSchema, EventCreateSchema, EventUpdateSchema
+from events.serializers import (
+    EventSchema, EventCreateSchema, EventUpdateSchema
+)
 
 from .models import Event
 
@@ -23,7 +25,6 @@ class EventBase(BaseResource):
             code=ResponseCodes.BAD_REQUEST_400,
             data=errors
         )
-
 
 
 class EventDetail(EventBase):
@@ -47,8 +48,7 @@ class EventUpdate(EventBase):
         if errors:
             return self._bad_request(errors)
 
-        #TODO: handle logic here!
-
+        # TODO: handle logic here
         db_session.query(Event).filter(data.id)
 
         if errors:
@@ -63,7 +63,7 @@ class EventList(EventBase):
         return template_response(
             status='OK',
             code=ResponseCodes.OK,
-            data=EventSchema().dump(query,many=True).data
+            data=EventSchema().dump(query, many=True).data
         )
 
 

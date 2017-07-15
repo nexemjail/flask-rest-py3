@@ -56,10 +56,10 @@ class EventPayloadFactory(factory.DictFactory):
 
     @factory.lazy_attribute
     def end(self):
-        return fuzzy.FuzzyDateTime(start_dt=self.start +
-                                            relativedelta(hours=1),
-                                   end_dt=self.start + relativedelta(
-                                       years=100)).fuzz()
+        return fuzzy.FuzzyDateTime(
+            start_dt=self.start + relativedelta(hours=1),
+            end_dt=self.start + relativedelta(years=100))\
+            .fuzz()
 
 
 class EventPayloadSchema(Schema):
@@ -83,9 +83,9 @@ class PeriodicEventPayloadFactory(EventPayloadFactory):
     @factory.lazy_attribute
     def period(self):
         return timedelta(days=randint(0, 365),
-                         hours=randint(0,59),
-                         minutes=randint(0,59),
-                         seconds=randint(1,59))
+                         hours=randint(0, 59),
+                         minutes=randint(0, 59),
+                         seconds=randint(1, 59))
 
     @factory.lazy_attribute
     def end(self):

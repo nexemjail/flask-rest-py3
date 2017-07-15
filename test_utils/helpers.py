@@ -25,8 +25,8 @@ def get_auth_response(test_client, username, password):
         password=password
     ))
     return test_client.post(USER_AUTH_URL,
-                  data=payload,
-                  **JSON_CONTENT_TYPE)
+                            data=payload,
+                            **JSON_CONTENT_TYPE)
 
 
 def get_auth_header(token):
@@ -38,8 +38,8 @@ def register_and_login_user(test_client, user_payload=None, with_id=False):
     if user_payload is None:
         user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(user_payload),
-                      **JSON_CONTENT_TYPE)
+                                data=json.dumps(user_payload),
+                                **JSON_CONTENT_TYPE)
     user_id = get_json(response, inner_data=True)['id']
     assert response.status_code == ResponseCodes.CREATED
     response = get_auth_response(test_client=test_client,

@@ -20,7 +20,7 @@ class Register(BaseResource):
             return self._bad_request(errors)
 
         users_found = db_session.query(User)\
-            .filter(User.username==data['username'])\
+            .filter(User.username == data['username'])\
             .count()
         if users_found > 0:
             return template_response(code=ResponseCodes.BAD_REQUEST_400,
@@ -42,6 +42,7 @@ class Register(BaseResource):
             code=ResponseCodes.BAD_REQUEST_400,
             data=errors
         )
+
 
 class UserDetail(BaseResource):
     @jwt_required()

@@ -25,8 +25,8 @@ def user_detail_url(user_id):
 def test_registration(test_client, transaction):
     user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
-                      data=json.dumps(user_payload),
-                      **JSON_CONTENT_TYPE)
+                                data=json.dumps(user_payload),
+                                **JSON_CONTENT_TYPE)
     assert response.status_code == ResponseCodes.CREATED
 
 
@@ -34,11 +34,11 @@ def test_user_already_exists(test_client, transaction):
     user_payload = fake_user_payload()
     payload = json.dumps(user_payload)
     test_client.post(REGISTER_URL,
-           data=payload,
-           **JSON_CONTENT_TYPE)
+                     data=payload,
+                     **JSON_CONTENT_TYPE)
     response = test_client.post(REGISTER_URL,
-                      data=payload,
-                      **JSON_CONTENT_TYPE)
+                                data=payload,
+                                **JSON_CONTENT_TYPE)
     assert response.status_code == ResponseCodes.BAD_REQUEST_400
 
 
@@ -67,7 +67,7 @@ def test_login_unsuccessful(test_client, transaction):
 
 def test_get_info(test_client, transaction):
     user_payload, token, user_id = register_and_login_user(test_client,
-                                                       with_id=True)
+                                                           with_id=True)
 
     response = test_client.get(user_detail_url(user_id=user_id),
                                headers=get_auth_header(token))
