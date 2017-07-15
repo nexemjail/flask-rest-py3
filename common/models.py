@@ -17,8 +17,10 @@ class User(Base, UserMixin):
 
     def __repr__(self):
         return '{id}: {email}, {first_name} {last_name}'\
-            .format(id=self.id,email=self.email,
-                    first_name=self.first_name, last_name=self.last_name)
+            .format(id=self.id,
+                    email=self.email,
+                    first_name=self.first_name,
+                    last_name=self.last_name)
 
     def to_json(self):
         return dict(

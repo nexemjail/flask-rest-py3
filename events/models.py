@@ -3,7 +3,7 @@ from sqlalchemy.testing.assertions import in_
 from common.database import db_session, Base, decl_base
 from sqlalchemy_utils.types import ChoiceType
 from sqlalchemy import (
-    Column, Integer, String, Text, Table, \
+    Column, Integer, String, Text, Table,
     ForeignKey, DateTime, Boolean
 )
 from sqlalchemy.orm import relationship
@@ -29,7 +29,8 @@ class EventStatus(Base):
     status = Column(ChoiceType(EVENT_CHOICES))
 
 
-LabelsEvents = Table('labels_events',
+LabelsEvents = Table(
+    'labels_events',
     decl_base.metadata,
     Column('label_id', Integer, ForeignKey('labels.id')),
     Column('event_id', Integer, ForeignKey('events.id'))
@@ -49,7 +50,6 @@ class Label(Base):
             .filter(Label.name.in_(labels_list))
 
         not_existing_labels = set(labels_list) - set(existing_labels.all())
-
 
         db_session.add_all((Label(name=name) for name in not_existing_labels))
         db_session.commit()
@@ -82,5 +82,4 @@ class Event(Base):
 class EventMedia(Base):
     __tablename__ = 'events_media'
     # TODO: add file here!
-    event_id = Column(Integer, ForeignKey('events.id',
-                                                   related_name='media'))
+    event_id = Column(Integer, ForeignKey('events.id', related_name='media'))

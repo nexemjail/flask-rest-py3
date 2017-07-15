@@ -33,7 +33,7 @@ def register_blueprints(app):
     from .base import app_bp as base_bp
     from events import blueprint as events_blueprint
 
-    app.register_blueprint(users_blueprint, )
+    app.register_blueprint(users_blueprint)
     app.register_blueprint(events_blueprint)
     app.register_blueprint(base_bp)
 

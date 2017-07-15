@@ -44,7 +44,7 @@ def user_factory(db_session):
 
         username = factory.Sequence(lambda n: 'unique_user_{0:04}'.format(n))
         email = factory.Sequence(lambda n: 'unique_email_{0:04}'
-                                              '@mail.com'.format(n))
+                                           '@mail.com'.format(n))
 
         first_name = factory.Faker('name')
         last_name = factory.Faker('name')
@@ -63,11 +63,12 @@ def event_factory(db_session):
         user = factory.SubFactory(user_factory())
         description = factory.Faker('text')
         start = fuzzy.FuzzyDateTime(datetime.datetime.now())
+
         @factory.lazy_attribute
         def end(self):
             return factory.LazyAttribute(
-                lambda x: self.start + relativedelta(seconds=1)
-            ).fuzz()
+                lambda x: self.start + relativedelta(seconds=1))\
+                .fuzz()
 
         # TODO: handle periods
         periodic = False
