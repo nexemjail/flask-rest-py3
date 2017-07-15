@@ -1,5 +1,3 @@
-from sqlalchemy.testing.assertions import in_
-
 from common.database import db_session, Base, decl_base
 from sqlalchemy_utils.types import ChoiceType
 from sqlalchemy import (

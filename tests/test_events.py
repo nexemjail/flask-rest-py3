@@ -1,8 +1,7 @@
 import json
 import factory
-import pytest
 import pytz
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from factory import fuzzy
 from flask.helpers import url_for
