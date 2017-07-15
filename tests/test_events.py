@@ -166,3 +166,42 @@ def test_invalid_start_end(test_client, transaction):
     data = get_json(response, inner_data=True)
     assert 'start' in data
     assert 'end' in data
+
+
+def test_invalid_period_and_periodic_flag(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = NonPeriodicEventFactory()
+    event_payload['period'] = PeriodicEventPayloadFactory()['period']
+
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.BAD_REQUEST_400
+    data = get_json(response, inner_data=True)
+    assert 'period' in data
+    assert 'periodic' in data
+
+
+def test_create_overlapping_events(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    event2_payload = PeriodicEventPayloadFactory(start=event_payload['start'],
+                                                 end=event_payload['end'])
+
+    create_event(test_client, token, event_payload=event_payload)
+
+    dumped_event_payload = EventPayloadSchema().dump(event2_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.BAD_REQUEST_400
+    data = get_json(response, inner_data=True)
+    # Schema level error
+    assert '_schema' in data

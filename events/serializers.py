@@ -40,16 +40,15 @@ class PeriodField(Field):
             map(int, hms_values.split(':'))
         )
         return timedelta(days=days, hours=hours,
-                             minutes=minutes, seconds=seconds)
+                         minutes=minutes, seconds=seconds)
 
 
 class EventStatusSchema(Schema):
     status = fields.Str()
 
-    @post_load
     def make_model(self, data):
         return db_session.query(EventStatus)\
-            .filter(EventStatus.status==data['status'])\
+            .filter(EventStatus.status == data['status'])\
             .limit(1)\
             .first()
 
@@ -78,7 +77,6 @@ class EventLabelSchema(Schema):
 
 class EventMediaSchema(Schema):
     pass
-
 
 
 class EventSchema(DateTimeEventMixin):
