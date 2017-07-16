@@ -174,5 +174,81 @@ class EventCreateSchema(DateTimeEventMixin):
 class EventUpdateSchema(EventCreateSchema):
     id = fields.Integer(required=True)
 
+    @validates_schema
+    def validate(self, data, many=None, partial=None):
+        super(EventUpdateSchema, self).validate(data, many, partial)
+
+        if not db_session.query(Event).filter(Event.id == data['id']).exists():
+            raise ValidationError('Event not exists', fields=['id'])
+
     def load_object(self, data):
         return db_session.query(Event).filter(Event.id == data['id']).first()
+
+    def get_status(self, status_name):
+        return db_session.query(Label).filter(Label.name == status_name).first()
+
+    def update_object(self, data):
+
+        event_data = {}
+
+        event = self.load_object(data)
+
+        event_data['start'] = data.get('start') or event.start
+        event_data['end'] = data.get('end') or event.end
+        event_data['period'] = data.get('period') or event.period
+        event_data['periodic'] = data.get('periodic') or event.periodic
+        event_data['next_notifications'] = data.get('next_notification') or \
+                                           event.next_notification
+        event_data['description'] = data.get('description') or event.description
+        event_data['place'] = data.get('place') or event.place
+        event_data['status'] = (
+            self.get_status(data.get('status')) or event.status)
+
+        validate_event(event_data)
+        event.start = data.get('start') or event.start
+        event.end = data.get('end') or event.end
+        event.period = data.get('period') or event.period
+        event.periodic = data.get('periodic') or event.periodic
+
+        event.next_notification = data.get('next_notification') or \
+                                  event.next_notification
+
+        event.description = data.get('description') or event.description
+
+        # Labels should be set in last moments, cause they are always valid
+
+        event.place = data.get('place') or event.place
+        # TODO: change it!
+        event.status = self.get_status(data.get('status')) or event.status
+
+
+
+        label_names = [l.name for l in event.labels]
+        event.labels = Label.create_all(data.get('labels') or label_names)
+
+
+def validate_event(data):
+    if data.get('periodic') is False and data.get('period') is not None:
+        raise ValidationError('Either both of period and periodic '
+                              'should be specified or none of them',
+                              field_names=['period', 'periodic'])
+    if data.get('next_notification') is None:
+        data['next_notification'] = data['start'] - \
+                                    relativedelta(minutes=5)
+
+    if data.get('end'):
+        start, end = data['start'], data['end']
+
+        if start > end:
+            raise ValidationError('Invalid event borders',
+                                  field_names=['start', 'end'])
+
+        event_borders = db_session.query(Event.start, Event.end) \
+            .filter(
+            Event.user_id == current_identity.id,
+            Event.end.isnot(None)) \
+            .all()
+        for event_start, event_end in event_borders:
+            if max(event_start, start) <= min(event_end, end):
+                raise ValidationError('Event is overlapping with others')
+    return data
