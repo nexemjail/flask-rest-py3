@@ -4,6 +4,7 @@ import json
 class ResponseCodes(enumerate):
     OK = 200
     CREATED = 201
+    NO_CONTENT = 204
     REDIRECT = 300
     BAD_REQUEST_400 = 400
     UNAUTHORIZED_401 = 401

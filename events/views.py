@@ -69,6 +69,20 @@ class EventUpdate(EventBase):
         )
 
 
+class EventDelete(EventBase):
+    @jwt_required()
+    def delete(self, event_id):
+        event = db_session.query(Event).filter(Event.id == event_id).first()
+        if event:
+            db_session.delete(event)
+            db_session.commit()
+            return template_response(
+                status='DELETED',
+                code=ResponseCodes.NO_CONTENT,
+            )
+        return self._not_found()
+
+
 class EventList(EventBase):
     @jwt_required()
     def get(self):
@@ -107,5 +121,7 @@ api.add_resource(EventDetail, '/events/event/<int:event_id>',
                  endpoint='detail')
 api.add_resource(EventUpdate, '/events/event/<int:event_id>',
                  endpoint='update')
+api.add_resource(EventDelete, '/events/event/<int:event_id>',
+                 endpoint='delete')
 api.add_resource(EventCreate, '/events/event/', endpoint='create')
 api.add_resource(EventList, '/events/event/list/', endpoint='list')
