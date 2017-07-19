@@ -211,6 +211,42 @@ def test_create_overlapping_events(test_client, transaction):
     assert '_schema' in data
 
 
+def test_create_event_with_too_big_period(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    event_payload['period'] = event_payload['end'] - event_payload['start'] +\
+        timedelta(hours=5)
+
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.BAD_REQUEST_400
+    data = get_json(response, inner_data=True)
+    assert 'period' in data
+
+
+def test_create_event_with_next_notification_too_far(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    event_payload['next_notification'] = event_payload['end'] + \
+        relativedelta(days=10)
+
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    response = test_client.post(CREATE_URL,
+                                data=json.dumps(dumped_event_payload),
+                                headers=dict(JSON_CONTENT_TYPE,
+                                             **get_auth_header(token)))
+
+    assert response.status_code == ResponseCodes.BAD_REQUEST_400
+    data = get_json(response, inner_data=True)
+    assert 'next_notification' in data
+
+
 def test_fully_update_event(test_client, transaction):
     user_payload, token = register_and_login_user(test_client)
 

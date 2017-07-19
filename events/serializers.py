@@ -102,6 +102,35 @@ class EventSchema(DateTimeEventMixin):
         return data.status.status.code
 
 
+def validate_event(data):
+    if data.get('periodic') is False and data.get('period') is not None:
+        raise ValidationError('Either both of period and periodic '
+                              'should be specified or none of them',
+                              field_names=['period', 'periodic'])
+    if data.get('next_notification') is None:
+        data['next_notification'] = data['start'] - \
+                                    relativedelta(minutes=5)
+
+    if data.get('end'):
+        start, end = data['start'], data['end']
+
+        if start > end:
+            raise ValidationError('Invalid event borders',
+                                  field_names=['start', 'end'])
+
+        if data['next_notification'] > end:
+            raise ValidationError('Next notification should be earlier '
+                                  'than end of event',
+                                  field_names=['next_notification'])
+
+        period = data.get('period')
+        if period:
+            if period > end - start:
+                raise ValidationError('Period must be smaller than '
+                                      'start-end time period',
+                                      field_names=['period'])
+
+
 class EventCreateSchema(DateTimeEventMixin):
     user = fields.Nested(UserSchema)
     description = fields.Str()
@@ -148,21 +177,9 @@ class EventCreateSchema(DateTimeEventMixin):
 
     @validates_schema
     def validate(self, data, many=None, partial=None):
-        if data.get('periodic') is False and data.get('period') is not None:
-            raise ValidationError('Either both of period and periodic '
-                                  'should be specified or none of them',
-                                  field_names=['period', 'periodic'])
-        if data.get('next_notification') is None:
-            data['next_notification'] = data['start'] - \
-                                        relativedelta(minutes=5)
-
-        if data.get('end'):
-            start, end = data['start'], data['end']
-
-            if start > end:
-                raise ValidationError('Invalid event borders',
-                                      field_names=['start', 'end'])
-            validate_borders(start, end)
+            validate_event(data)
+            if data.get('end'):
+                validate_borders(data['start'], data['end'])
 
 
 def validate_borders(start, end, self_id=None):
@@ -194,23 +211,9 @@ class EventUpdateSchema(EventCreateSchema):
         if not self.update_validation:
             return
 
-        # TODO: check period < end - start
-        if data.get('periodic') is False and data.get('period') is not None:
-            raise ValidationError('Either both of period and periodic '
-                                  'should be specified or none of them',
-                                  field_names=['period', 'periodic'])
-        # TODO: check whether is in [start, end] interval
-        if data.get('next_notification') is None:
-            data['next_notification'] = data['start'] - \
-                                        relativedelta(minutes=5)
-
+        validate_event(data)
         if data.get('end'):
-            start, end = data['start'], data['end']
-
-            if start > end:
-                raise ValidationError('Invalid event borders',
-                                      field_names=['start', 'end'])
-            validate_borders(start, end, self.event_id)
+            validate_borders(data['start'], data['end'], self.event_id)
 
     @staticmethod
     def load_object(event_id):
