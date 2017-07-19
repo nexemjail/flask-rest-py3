@@ -245,6 +245,8 @@ def test_partially_update_event(test_client, transaction):
     del dumped_payload['period']
     del dumped_event_payload['labels']
     del dumped_event_payload['end']
+    del dumped_event_payload['start']
+    del dumped_event_payload['next_notification']
 
     response = test_client.patch(get_update_url(event_id),
                                  data=json.dumps(dumped_event_payload),

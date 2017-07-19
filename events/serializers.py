@@ -183,7 +183,8 @@ def validate_borders(start, end, self_id=None):
 # TODO: finish update schema!
 # TODO: handle labels and statuses
 class EventUpdateSchema(EventCreateSchema):
-    def __init__(self, *args, event_id=None, update_validation=False, **kwargs):
+    def __init__(self, *args, event_id=None,
+                 update_validation=False, **kwargs):
         super(EventCreateSchema, self).__init__(*args, **kwargs)
         self.event_id = event_id
         self.update_validation = update_validation
@@ -193,10 +194,12 @@ class EventUpdateSchema(EventCreateSchema):
         if not self.update_validation:
             return
 
+        # TODO: check period < end - start
         if data.get('periodic') is False and data.get('period') is not None:
             raise ValidationError('Either both of period and periodic '
                                   'should be specified or none of them',
                                   field_names=['period', 'periodic'])
+        # TODO: check whether is in [start, end] interval
         if data.get('next_notification') is None:
             data['next_notification'] = data['start'] - \
                                         relativedelta(minutes=5)
@@ -222,18 +225,19 @@ class EventUpdateSchema(EventCreateSchema):
         return [l.name for l in event.labels]
 
     def get_data(self, event, data):
-        return  {
+        return {
             'start': data.get('start') or event.start,
             'end': data.get('end') or event.end,
             'period': data.get('period') or event.period,
-            'periodic':data.get('periodic') if data.get('periodic') is not
-                                               None else event.periodic,
+            'periodic':
+                data.get('periodic') if data.get('periodic') is not None
+                else event.periodic,
             'next_notification': data.get('next_notification') or
-                                  event.next_notification,
+                                 event.next_notification,
             'description': data.get('description') or event.description,
             'place': data.get('place') or event.place,
-            'status': (self.get_status_by_name(data.get('status'))
-                      or event.status).status.code,
+            'status': (self.get_status_by_name(data.get('status')) or
+                       event.status).status.code,
             'labels': data.get('labels') or self.get_labels(event)
         }
 
