@@ -233,7 +233,7 @@ class EventUpdateSchema(EventCreateSchema):
                 data.get('periodic') if data.get('periodic') is not None
                 else event.periodic,
             'next_notification': data.get('next_notification') or
-                                 event.next_notification,
+                event.next_notification,
             'description': data.get('description') or event.description,
             'place': data.get('place') or event.place,
             'status': (self.get_status_by_name(data.get('status')) or
