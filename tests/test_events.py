@@ -1,27 +1,22 @@
 import json
-import factory
-import pytz
-from datetime import datetime, timedelta
+from datetime import timedelta
+
 from dateutil.relativedelta import relativedelta
-from factory import fuzzy
 from flask.helpers import url_for
-from random import randint
+from marshmallow import Schema, fields
 
 from common import app
 from common.utils import ResponseCodes, get_json
-from marshmallow import Schema, fields
-
 from events.serializers import PeriodField
+from test_utils.factories import (
+    EventPayloadFactory,
+    NonPeriodicEventFactory,
+    PeriodicEventPayloadFactory
+)
 from test_utils.helpers import get_auth_header, register_and_login_user, \
     JSON_CONTENT_TYPE, dict_contains_subset
 
-
 DATETIME_FORMAT = app.config['DATETIME_FORMAT']
-
-
-def get_timezone_aware_time():
-    return datetime.now(pytz.utc)
-
 
 with app.test_request_context():
     CREATE_URL = url_for('events.create')
@@ -43,34 +38,6 @@ def get_delete_url(event_id):
         return url_for('events.update', event_id=event_id)
 
 
-class EventPayloadFactory(factory.DictFactory):
-    description = factory.Faker('word')
-    # TODO: handle C(cancelled) too
-    status = fuzzy.FuzzyChoice(['W', 'P'])
-    periodic = False
-
-    @factory.lazy_attribute
-    def labels(self):
-        words = randint(0, 7)
-        return list(set(factory.Faker('words').generate(
-            extra_kwargs={'nb': words}))
-        )
-
-    @factory.lazy_attribute
-    def start(self):
-        start_dt = get_timezone_aware_time()
-        return fuzzy.FuzzyDateTime(start_dt=get_timezone_aware_time(),
-                                   end_dt=start_dt + relativedelta(years=100))\
-            .fuzz()
-
-    @factory.lazy_attribute
-    def end(self):
-        return fuzzy.FuzzyDateTime(
-            start_dt=self.start + relativedelta(hours=1),
-            end_dt=self.start + relativedelta(years=100))\
-            .fuzz()
-
-
 class EventPayloadSchema(Schema):
     description = fields.Str()
     status = fields.Str(required=True)
@@ -80,33 +47,6 @@ class EventPayloadSchema(Schema):
     labels = fields.List(fields.Str)
     period = PeriodField()
     next_notification = fields.DateTime(format=DATETIME_FORMAT)
-
-
-class NonPeriodicEventFactory(EventPayloadFactory):
-    periodic = False
-
-
-class PeriodicEventPayloadFactory(EventPayloadFactory):
-    periodic = True
-
-    @factory.lazy_attribute
-    def period(self):
-        return timedelta(days=randint(0, 365),
-                         hours=randint(0, 59),
-                         minutes=randint(0, 59),
-                         seconds=randint(1, 59))
-
-    @factory.lazy_attribute
-    def end(self):
-        start_datetime = self.start + relativedelta(hours=1) + self.period
-        return fuzzy.FuzzyDateTime(
-            start_dt=start_datetime,
-            end_dt=start_datetime + relativedelta(years=100))\
-            .fuzz()
-
-    @factory.lazy_attribute
-    def next_notification(self):
-        return self.start + self.period
 
 
 def create_event(test_client, token,

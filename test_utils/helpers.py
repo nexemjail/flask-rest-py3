@@ -1,10 +1,13 @@
 import json
 from collections import Counter
+from datetime import datetime
+
+import pytz
+
 from common import app
 from flask import url_for
 
 from common.utils import ResponseCodes, get_json
-from test_utils.factories import fake_user_payload
 
 JWT_KEY = app.config['JWT_KEY']
 
@@ -35,6 +38,7 @@ def get_auth_header(token):
 
 
 def register_and_login_user(test_client, user_payload=None, with_id=False):
+    from test_utils.factories import fake_user_payload
     if user_payload is None:
         user_payload = fake_user_payload()
     response = test_client.post(REGISTER_URL,
@@ -63,3 +67,7 @@ def dict_contains_subset(child, parent):
         elif parent_value != v:
             return False
     return True
+
+
+def get_timezone_aware_time():
+    return datetime.now(pytz.utc)
