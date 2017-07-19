@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from flask_jwt import current_identity
 from flask_marshmallow import Schema
@@ -102,11 +103,21 @@ class EventSchema(DateTimeEventMixin):
         return data.status.status.code
 
 
-def validate_event(data):
+def raise_validation_error(message, field_names=None, container=None):
+    error = ValidationError(message, field_names=field_names)
+    if container is not None:
+        container.append(error)
+        return container
+    raise error
+
+
+def validate_event(data, error_container=None):
     if data.get('periodic') is False and data.get('period') is not None:
-        raise ValidationError('Either both of period and periodic '
-                              'should be specified or none of them',
-                              field_names=['period', 'periodic'])
+        error_container = raise_validation_error(
+            'Either both of period and periodic should be specified or'
+            ' none of them',
+            field_names=['period', 'periodic'],
+            container=error_container)
     if data.get('next_notification') is None:
         data['next_notification'] = data['start'] - \
                                     relativedelta(minutes=5)
@@ -115,20 +126,25 @@ def validate_event(data):
         start, end = data['start'], data['end']
 
         if start > end:
-            raise ValidationError('Invalid event borders',
-                                  field_names=['start', 'end'])
+            error_container = raise_validation_error(
+                'Invalid event borders',
+                field_names=['start', 'end'],
+                container=error_container)
 
         if data['next_notification'] > end:
-            raise ValidationError('Next notification should be earlier '
-                                  'than end of event',
-                                  field_names=['next_notification'])
+            error_container = raise_validation_error(
+                'Next notification should be earlier than end of event',
+                field_names=['next_notification'],
+                container=error_container)
 
         period = data.get('period')
         if period:
             if period > end - start:
-                raise ValidationError('Period must be smaller than '
-                                      'start-end time period',
-                                      field_names=['period'])
+                error_container = raise_validation_error(
+                    'Period must be smaller than start-end time period',
+                    field_names=['period'],
+                    container=error_container)
+        return error_container
 
 
 class EventCreateSchema(DateTimeEventMixin):
@@ -176,13 +192,13 @@ class EventCreateSchema(DateTimeEventMixin):
             return obj.status.status.code
 
     @validates_schema
-    def validate(self, data, many=None, partial=None):
-            validate_event(data)
-            if data.get('end'):
-                validate_borders(data['start'], data['end'])
+    def validate(self, data):
+        validate_event(data)
+        if data.get('end'):
+            validate_borders(data['start'], data['end'])
 
 
-def validate_borders(start, end, self_id=None):
+def validate_borders(start, end, self_id=None, error_container=None):
     event_borders = db_session.query(Event.start, Event.end) \
         .filter(
         Event.user_id == current_identity.id,
@@ -194,26 +210,52 @@ def validate_borders(start, end, self_id=None):
 
     for event_start, event_end in event_borders.all():
         if max(event_start, start) <= min(event_end, end):
-            raise ValidationError('Event is overlapping with others')
+            error_container = raise_validation_error(
+                'Event is overlapping with others',
+                container=error_container)
+    return error_container
+
+
+def container_to_payload(error_container):
+    errors = defaultdict(list)
+    if not error_container:
+        return
+    for error in error_container:
+        if error.field_names:
+            for fn in error.field_names:
+                errors[fn].append(*error.messages)
+        else:
+            errors['_schema'].append(*error.messages)
+    return errors
 
 
 # TODO: finish update schema!
 # TODO: handle labels and statuses
 class EventUpdateSchema(EventCreateSchema):
-    def __init__(self, *args, event_id=None,
-                 update_validation=False, **kwargs):
+    def __init__(self, *args,
+                 partial=False,
+                 event_id=None,
+                 raise_errors=True, **kwargs):
         super(EventCreateSchema, self).__init__(*args, **kwargs)
         self.event_id = event_id
-        self.update_validation = update_validation
+        self.raise_errors = raise_errors
+        self.partial = partial
 
     @validates_schema
-    def validate(self, data, many=None, partial=None):
-        if not self.update_validation:
-            return
+    def validate(self, data):
+        error_container = None if self.raise_errors else []
+        if self.partial:
+            return error_container
 
-        validate_event(data)
+        error_container = validate_event(
+            data, error_container=error_container)
         if data.get('end'):
-            validate_borders(data['start'], data['end'], self.event_id)
+            error_container = validate_borders(
+                start=data['start'],
+                end=data['end'],
+                self_id=self.event_id,
+                error_container=error_container)
+        return container_to_payload(error_container)
 
     @staticmethod
     def load_object(event_id):

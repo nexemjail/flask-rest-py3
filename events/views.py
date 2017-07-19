@@ -55,10 +55,8 @@ class EventUpdate(EventBase):
 
         # here all errors are checked and payload is validated
         event_data = schema.get_data(event, data)
-        # TODO: find a way not to be an INVALID
-        event_data, errors = EventUpdateSchema(
-            event_id=event.id, update_validation=True)\
-            .load(EventCreateSchema().dump(event_data).data)
+        errors = EventUpdateSchema(raise_errors=False,
+                                   event_id=event.id).validate(event_data)
         if errors:
             return self._bad_request(errors)
 
