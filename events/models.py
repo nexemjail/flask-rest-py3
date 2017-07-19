@@ -47,7 +47,8 @@ class Label(Base):
             .query(Label.name)\
             .filter(Label.name.in_(labels_list))
 
-        not_existing_labels = set(labels_list) - set(existing_labels.all())
+        existing_labels_list = [l for (l, ) in existing_labels.all()]
+        not_existing_labels = set(labels_list) - set(existing_labels_list)
 
         db_session.add_all((Label(name=name) for name in not_existing_labels))
         db_session.commit()
