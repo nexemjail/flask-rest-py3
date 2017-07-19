@@ -141,7 +141,10 @@ class EventCreateSchema(DateTimeEventMixin):
         return event
 
     def get_status(self, obj):
-        return obj.status.status.code
+        if isinstance(obj, dict):
+            return obj['status']
+        elif isinstance(obj, Event):
+            return obj.status.status.code
 
     @validates_schema
     def validate(self, data, many=None, partial=None):
@@ -159,97 +162,95 @@ class EventCreateSchema(DateTimeEventMixin):
             if start > end:
                 raise ValidationError('Invalid event borders',
                                       field_names=['start', 'end'])
+            validate_borders(start, end)
 
-            event_borders = db_session.query(Event.start, Event.end)\
-                .filter(
-                    Event.user_id == current_identity.id,
-                    Event.end.isnot(None))\
-                .all()
-            for event_start, event_end in event_borders:
-                if max(event_start, start) <= min(event_end, end):
-                    raise ValidationError('Event is overlapping with others')
+
+def validate_borders(start, end, self_id=None):
+    event_borders = db_session.query(Event.start, Event.end) \
+        .filter(
+        Event.user_id == current_identity.id,
+        Event.end.isnot(None)
+    )
+
+    if self_id is not None:
+        event_borders = event_borders.filter(Event.id != self_id)
+
+    for event_start, event_end in event_borders.all():
+        if max(event_start, start) <= min(event_end, end):
+            raise ValidationError('Event is overlapping with others')
 
 
 # TODO: finish update schema!
+# TODO: handle labels and statuses
 class EventUpdateSchema(EventCreateSchema):
-    id = fields.Integer(required=True)
+    def __init__(self, *args, event_id=None, update_validation=False, **kwargs):
+        super(EventCreateSchema, self).__init__(*args, **kwargs)
+        self.event_id = event_id
+        self.update_validation = update_validation
 
     @validates_schema
     def validate(self, data, many=None, partial=None):
-        super(EventUpdateSchema, self).validate(data, many, partial)
+        if not self.update_validation:
+            return
 
-        if not db_session.query(Event).filter(Event.id == data['id']).exists():
-            raise ValidationError('Event not exists', fields=['id'])
+        if data.get('periodic') is False and data.get('period') is not None:
+            raise ValidationError('Either both of period and periodic '
+                                  'should be specified or none of them',
+                                  field_names=['period', 'periodic'])
+        if data.get('next_notification') is None:
+            data['next_notification'] = data['start'] - \
+                                        relativedelta(minutes=5)
 
-    def load_object(self, data):
-        return db_session.query(Event).filter(Event.id == data['id']).first()
+        if data.get('end'):
+            start, end = data['start'], data['end']
 
-    def get_status(self, status_name):
-        return db_session.query(Label)\
-            .filter(Label.name == status_name)\
+            if start > end:
+                raise ValidationError('Invalid event borders',
+                                      field_names=['start', 'end'])
+            validate_borders(start, end, self.event_id)
+
+    @staticmethod
+    def load_object(event_id):
+        return db_session.query(Event).filter(Event.id == event_id).first()
+
+    def get_status_by_name(self, status_name):
+        return db_session.query(EventStatus)\
+            .filter(EventStatus.status == status_name)\
             .first()
 
-    def update_object(self, data):
+    def get_labels(self, event):
+        return [l.name for l in event.labels]
 
-        event_data = {}
+    def get_data(self, event, data):
+        return  {
+            'start': data.get('start') or event.start,
+            'end': data.get('end') or event.end,
+            'period': data.get('period') or event.period,
+            'periodic':data.get('periodic') if data.get('periodic') is not
+                                               None else event.periodic,
+            'next_notification': data.get('next_notification') or
+                                  event.next_notification,
+            'description': data.get('description') or event.description,
+            'place': data.get('place') or event.place,
+            'status': (self.get_status_by_name(data.get('status'))
+                      or event.status).status.code,
+            'labels': data.get('labels') or self.get_labels(event)
+        }
 
-        event = self.load_object(data)
-
-        event_data['start'] = data.get('start') or event.start
-        event_data['end'] = data.get('end') or event.end
-        event_data['period'] = data.get('period') or event.period
-        event_data['periodic'] = data.get('periodic') or event.periodic
-        event_data['next_notifications'] = data.get('next_notification') or \
-            event.next_notification
-        event_data['description'] = data.get('description') or\
-            event.description
-        event_data['place'] = data.get('place') or event.place
-        event_data['status'] = (
-            self.get_status(data.get('status')) or event.status)
-
-        validate_event(event_data)
-        event.start = data.get('start') or event.start
-        event.end = data.get('end') or event.end
-        event.period = data.get('period') or event.period
-        event.periodic = data.get('periodic') or event.periodic
-
-        event.next_notification = data.get('next_notification') or \
-            event.next_notification
-
-        event.description = data.get('description') or event.description
+    def update(self, event, data):
+        event.start = data.get('start')
+        event.end = data.get('end')
+        event.period = data.get('period')
+        event.periodic = data.get('periodic')
+        event.next_notification = data.get('next_notification')
+        event.description = data.get('description')
+        event.place = data.get('place')
+        event.status = self.get_status_by_name(data.get('status'))
 
         # Labels should be set in last moments, cause they are always valid
-
-        event.place = data.get('place') or event.place
-        # TODO: change it!
-        event.status = self.get_status(data.get('status')) or event.status
-
-        label_names = [l.name for l in event.labels]
-        event.labels = Label.create_all(data.get('labels') or label_names)
-
-
-def validate_event(data):
-    if data.get('periodic') is False and data.get('period') is not None:
-        raise ValidationError('Either both of period and periodic '
-                              'should be specified or none of them',
-                              field_names=['period', 'periodic'])
-    if data.get('next_notification') is None:
-        data['next_notification'] = data['start'] - \
-                                    relativedelta(minutes=5)
-
-    if data.get('end'):
-        start, end = data['start'], data['end']
-
-        if start > end:
-            raise ValidationError('Invalid event borders',
-                                  field_names=['start', 'end'])
-
-        event_borders = db_session.query(Event.start, Event.end) \
-            .filter(
-            Event.user_id == current_identity.id,
-            Event.end.isnot(None)) \
-            .all()
-        for event_start, event_end in event_borders:
-            if max(event_start, start) <= min(event_end, end):
-                raise ValidationError('Event is overlapping with others')
-    return data
+        label_names = data.get('labels')
+        if label_names is None:
+            label_names = [l.name for l in event.labels]
+        event.labels = Label.create_all(label_names).all()
+        db_session.commit()
+        return event

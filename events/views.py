@@ -42,17 +42,33 @@ class EventDetail(EventBase):
 
 class EventUpdate(EventBase):
     @jwt_required()
-    def patch(self):
+    def patch(self, event_id):
         schema = EventUpdateSchema(partial=True)
+        # ignoring errors here. Errors are checked in update method
         data, errors = schema.loads(bytes_to_str(request.data))
         if errors:
             return self._bad_request(errors)
 
-        # TODO: handle logic here
-        db_session.query(Event).filter(data.id)
+        event = schema.load_object(event_id)
+        if not event:
+            return self._not_found()
 
+        # here all errors are checked and payload is validated
+        event_data = schema.get_data(event, data)
+        # TODO: find a way not to be an INVALID
+        event_data, errors = EventUpdateSchema(
+            event_id=event.id, update_validation=True)\
+            .load(EventCreateSchema().dump(event_data).data)
         if errors:
             return self._bad_request(errors)
+
+        event = schema.update(event, event_data)
+
+        return template_response(
+            status='Updated',
+            code=ResponseCodes.OK,
+            data=EventSchema().dump(event).data
+        )
 
 
 class EventList(EventBase):

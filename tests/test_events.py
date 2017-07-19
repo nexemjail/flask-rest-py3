@@ -33,6 +33,11 @@ def get_detail_url(event_id):
         return url_for('events.detail', event_id=event_id)
 
 
+def get_update_url(event_id):
+    with app.test_request_context():
+        return url_for('events.update', event_id=event_id)
+
+
 class EventPayloadFactory(factory.DictFactory):
     description = factory.Faker('word')
     # TODO: handle C(cancelled) too
@@ -204,3 +209,69 @@ def test_create_overlapping_events(test_client, transaction):
     data = get_json(response, inner_data=True)
     # Schema level error
     assert '_schema' in data
+
+
+def test_fully_update_event(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_payload, data = create_event(test_client, token,
+                                        event_payload=event_payload,
+                                        return_dumped_payload=False)
+    event_id = data['id']
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+
+    response = test_client.patch(get_update_url(event_id),
+                                 data=json.dumps(dumped_event_payload),
+                                 headers=dict(JSON_CONTENT_TYPE,
+                                              **get_auth_header(token)))
+    assert dict_contains_subset(dumped_event_payload,
+                                get_json(response, inner_data=True))
+
+
+def test_partially_update_event(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_payload, data = create_event(test_client, token,
+                                        event_payload=event_payload,
+                                        return_dumped_payload=False)
+    event_id = data['id']
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    del dumped_payload['period']
+    del dumped_event_payload['labels']
+    del dumped_event_payload['end']
+
+    response = test_client.patch(get_update_url(event_id),
+                                 data=json.dumps(dumped_event_payload),
+                                 headers=dict(JSON_CONTENT_TYPE,
+                                              **get_auth_header(token)))
+    assert dict_contains_subset(dumped_event_payload,
+                                get_json(response, inner_data=True))
+
+
+def test_invalid_event_update(test_client, transaction):
+    user_payload, token = register_and_login_user(test_client)
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_payload, data = create_event(test_client, token,
+                                        event_payload=event_payload,
+                                        return_dumped_payload=False)
+    event_id = data['id']
+
+    event_payload = PeriodicEventPayloadFactory()
+    dumped_event_payload = EventPayloadSchema().dump(event_payload).data
+    dumped_event_payload['periodic'] = False
+
+    response = test_client.patch(get_update_url(event_id),
+                                 data=json.dumps(dumped_event_payload),
+                                 headers=dict(JSON_CONTENT_TYPE,
+                                              **get_auth_header(token)))
+    assert response.status_code == 400
+    data = get_json(response, inner_data=True)
+    assert 'period' in data
+    assert 'periodic' in data
