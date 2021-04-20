@@ -27,7 +27,7 @@ marshmallow==2.13.5
 marshmallow-sqlalchemy==0.13.1
 pep8==1.7.0
 psycopg2==2.7.1
-py==1.4.34
+py==1.10.0
 pyflakes==1.5.0
 pytest==3.1.2
 pytest-cache==1.0
